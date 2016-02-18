@@ -1,30 +1,37 @@
 #!/bin/bash
-stars=1
-timesteps=1
-function treeforce {
-  run=$(./treecode nbody=$stars timesteps=$timesteps )
+stars=1000
+timesteps=1000
+function run_cs257 {
+  run=$(./cs257 $stars $timesteps 0)
   var=0
   for x in $run; do 
     #echo $x
     var=$((var+1))
-    # startrun
-    if [ $var -eq 25 ]
+    # Loop 0
+    if [ $var -eq 16 ]
       then
-        echo startrun $x
+        echo Loop 0 $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
-    # Initial Treeforce
-    if [ $var -eq 28 ]
+    # Loop 1
+    if [ $var -eq 21 ]
       then
-        echo Initial Treeforce $x
+        echo Loop 1 $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
-    # Treeforce Loop
-    if [ $var -eq 33 ]
+    # # Loop 2
+    if [ $var -eq 26 ]
       then
-        echo Treeforce loop $x
+        echo Loop 2 $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # Loop 3
+    if [ $var -eq 31 ]
+      then
+        echo Loop 3 $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
@@ -35,27 +42,29 @@ function treeforce {
         printf $x >> test.csv
         printf , >> test.csv
     fi
+    # GFLOP/s
+    if [ $var -eq 39 ]
+      then
+        echo GFLOP $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # GB/s
+    if [ $var -eq 42 ]
+      then
+        echo GB $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # Answer
+    if [ $var -eq 45 ]
+      then
+        echo Answer $x
+        printf $x >> test.csv
+    fi
   done
 }
 # Comment out if just want to add stuff to the end.
-# printf stars,timesteps,startrun,initial_treeforce,treeforce,totalp > test.csv
-# echo >> test.csv
-
-# while [ $stars -lt 10000 ]; do
-#   while [ $timesteps -lt 10000 ]; do
-#     echo ---$stars stars----
-#     echo ---$timesteps timesteps---
-#     printf $stars >> test.csv
-#     printf , >> test.csv
-#     printf $timesteps >> test.csv
-#     printf , >> test.csv
-#     treeforce
-#     let timesteps=timesteps*10
-#     echo >> test.csv
-#   done
-#   timesteps=1
-#   let stars=stars*10
-# done 
 # printf stars,timesteps,loop0,loop1,loop2,loop3,total,gflop,gb,answer > test.csv
 # echo >> test.csv
 
@@ -91,7 +100,7 @@ function treeforce {
 count=1
 
 while [ $count -lt 11 ]; do
-  run_treecode
+  run_cs257
   echo >> test.csv
   count=$((count+1))
 done 
@@ -111,4 +120,3 @@ done
 #   timesteps=1
 #   let stars=stars*10
 # done 
->>>>>>> 655aa5e837c3d42d04302652f02614abb2d6497c

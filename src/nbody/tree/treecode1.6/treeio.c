@@ -177,11 +177,12 @@ void finaloutput() {
   printf("treeforce loop (force calculation): %f \n", treeforce);
   printf("Total: %f \n", total);
 
-  double flops = 20.0f * (double) N * (double) (N-1) * (double) steps;
+  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) steps;
   printf(" GFLOP/s = %f\n", flops / 1000000000.0f / total);
 
-  double bytes = 4.0f * (double) N * 10.0f * (double) steps;
+  double bytes = 4.0f * (double) nbody * 10.0f * (double) steps;
   printf(" GB/s = %f\n", bytes / 1000000000.0f / total);
+
 }
 
 //  diagnostics: compute set of dynamical diagnostics.

@@ -107,7 +107,7 @@ int main(int argc, string argv[]) {
   if (dtime != 0.0)				// if time steps requested
     // TODO: make this work in timesteps?
     treeforce_0 = wtime();
-    while (nstep < timesteps) { // while not past tstop
+    while (nstep <= timesteps) { // while not past tstop
       stepsystem();       // advance step by step
       output();         // output results each time
     }
