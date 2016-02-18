@@ -35,8 +35,7 @@ local cellptr interact = NULL;                  // list of interactions
 //  gravcalc: perform force calculation on all particles.
 //  _____________________________________________________
  
-void gravcalc(void)
-{
+void gravcalc(void) {
   double cpustart;
   vector rmid;
  
@@ -65,8 +64,7 @@ void gravcalc(void)
 //  ___________________________________________________________________
  
 local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
-                    nodeptr p, real psize, vector pmid)
-{
+                    nodeptr p, real psize, vector pmid){
   nodeptr *np, *ap, q;
   int actsafe;
   matrix trQM;
@@ -125,8 +123,7 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
 //  accept: quick criterion accepts any cell not touching cell p.
 //  _____________________________________________________________
  
-local bool accept(nodeptr c, real psize, vector pmid)
-{
+local bool accept(nodeptr c, real psize, vector pmid) {
   real p15, dk;
  
   p15 = ((real) 1.5) * psize;			// premultiply cell size
@@ -148,8 +145,7 @@ local bool accept(nodeptr c, real psize, vector pmid)
 //  does not intersect cell p, and also imposes above condition.
 //  ______________________________________________________________
  
-local bool accept(nodeptr c, real psize, vector pmid)
-{
+local bool accept(nodeptr c, real psize, vector pmid) {
   real dmax, dsq, dk;
   int k;
  
@@ -175,8 +171,7 @@ local bool accept(nodeptr c, real psize, vector pmid)
 //  _____________________________________________________________
  
 local void walksub(nodeptr *nptr, nodeptr *np, cellptr cptr, cellptr bptr,
-                   nodeptr p, real psize, vector pmid)
-{
+                   nodeptr p, real psize, vector pmid) {
   nodeptr q;
   int k;
   vector qmid;
@@ -200,8 +195,7 @@ local void walksub(nodeptr *nptr, nodeptr *np, cellptr cptr, cellptr bptr,
 //  gravsum: compute gravitational field at body p0.
 //  ________________________________________________
  
-local void gravsum(bodyptr p0, cellptr cptr, cellptr bptr)
-{
+local void gravsum(bodyptr p0, cellptr cptr, cellptr bptr) {
   vector pos0, acc0;
   real phi0;
  
@@ -225,8 +219,7 @@ local void gravsum(bodyptr p0, cellptr cptr, cellptr bptr)
 //  _______________________________________
  
 local void sumnode(cellptr start, cellptr finish,
-                   vector pos0, real *phi0, vector acc0)
-{
+                   vector pos0, real *phi0, vector acc0) {
   real eps2, dr2, dr2i, dr1i, mdr1i, mdr3i;
   vector dr;
  
@@ -247,8 +240,7 @@ local void sumnode(cellptr start, cellptr finish,
 //  _______________________________________________________________
 
 local void sumcell(cellptr start, cellptr finish, vector pos0,
-		   real *phi0, vector acc0)
-{
+		   real *phi0, vector acc0) {
   real eps2, eps2thrd, dr2, dr2i, dr1i, mdr1i, mdr3i, qdr2, dr5i, phi_q;
   vector dr, qdr;
  

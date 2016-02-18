@@ -33,8 +33,8 @@ local int subnhist[MAXLEVEL];			// count subnodes by level
 //  maketree: initialize tree structure for hierarchical force calculation.
 //  _______________________________________________________________________
  
-void maketree(bodyptr btab, int nbody)
-{
+void maketree(bodyptr btab, int nbody) {
+  double t0, t1;
   double cpustart;
   bodyptr p;
   int i;

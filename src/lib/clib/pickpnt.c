@@ -15,6 +15,8 @@ void pickshell(real vec[], int ndim, real rad)
 
   do {
     rsq = 0.0;
+    // For each dimension, pick a random number between -1
+    // and 1 and set it to the position vector, vec.
     for (i = 0; i < ndim; i++) {
       vec[i] = xrandom(-1.0, 1.0);
       rsq = rsq + vec[i] * vec[i];

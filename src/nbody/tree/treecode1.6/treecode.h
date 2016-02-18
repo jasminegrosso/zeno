@@ -35,6 +35,18 @@ global int nstatic;			// number of static bodies
 global bodyptr bodytab;			// points to array of bodies
 global bool testcalc;			// indicate test-particle calc.
 
+
+// my stuff
+global double wtime();
+global double startrun_time_0;
+global double startrun_time_1;
+global double treeforce_initial_0;
+global double treeforce_initial_1;
+global double treeforce_0;
+global double treeforce_1;
+
+global int timesteps;     // number of timesteps
+
 //  Prototypes for I/O routines.
 //  ____________________________
 
@@ -44,5 +56,6 @@ void forcereport(void);			// report on force calculation
 void output(void);			// perform output operation
 void savestate(string);			// save system state		
 void restorestate(string);		// restore system state
+void finaloutput();
 
 #endif // ! _treecode_h

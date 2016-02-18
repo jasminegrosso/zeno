@@ -4,8 +4,12 @@
  */
 
 #define global				// don't default global to extern
-
+#
 #include "treecode.h"
+
+#include <sys/time.h>
+#include <sys/times.h>
+#include <sys/resource.h>
 
 //  Default values for input parameters.
 //  ____________________________________
@@ -30,7 +34,7 @@ string defv[] = {
     "save=",			";State file pattern, written each step.",
 				";Directive (eg, %d) alternates 0 and 1.",
     "dtime=1/32",		";Timestep for leapfrog integration",
-    "eps=0.025",		";Smoothing length for force calculation",
+    "eps=0.0125",		";Smoothing length for force calculation",
 #if !defined(QUICKSCAN)
     "theta=1.0",		";Hierarchical force accuracy parameter",
 #endif
@@ -49,6 +53,7 @@ string defv[] = {
 				";If pos (neg), count from start (end).",
     "nbody=65536",		";Number of bodies generated for test run.",
 				";If no input file given, make Plummer model.",
+    "timesteps=100",    ";Number of timesteps to run for.",
     "seed=123",			";Random number seed for test run",
     "stream=",			";Output file pattern for frame stream",
     "log=",			";Output file name for calculation log.",
@@ -75,32 +80,52 @@ local void treeforce(void);			// do force calculation
 gsprof *gravgsp = NULL;				// GSP for external field
 #endif
 
+/**
+ * Return time in seconds in Epoch.
+ */
+double wtime() {
+  struct rusage r;
+  struct timeval t;
+  gettimeofday( &t, (struct timezone *)0 );
+  return t.tv_sec + t.tv_usec*1.0e-6;
+}
+
 //  main: toplevel routine for hierarchical N-body code.
 //  ____________________________________________________
 
-int main(int argc, string argv[])
-{
+int main(int argc, string argv[]) {
   initparam(argv, defv);			// initialize param access
   headline = defv[0] + 1;			// use default headline
   startrun();					// get params & input data
   startoutput();				// activate output code
   if (nstep == 0) {				// if data just initialized
+    treeforce_initial_0 = wtime();
     treeforce();				// calculate initial forces
+    treeforce_initial_1 = wtime();
     output();					// generate initial output
   }
   if (dtime != 0.0)				// if time steps requested
-    while (tstop - tnow > 0.01 * dtime) {	// while not past tstop
-      stepsystem();				// advance step by step
-      output();					// output results each time
+    // TODO: make this work in timesteps?
+    treeforce_0 = wtime();
+    while (nstep < timesteps) { // while not past tstop
+      stepsystem();       // advance step by step
+      output();         // output results each time
     }
+    // while (tstop - tnow > 0.01 * dtime) {	// while not past tstop
+    //   stepsystem();				// advance step by step
+    //   output();					// output results each time
+    // }
+    treeforce_1 = wtime();
+  finaloutput();
   return (0);					// end with proper status
 }
 
 //  startrun: startup hierarchical N-body code.
 //  ___________________________________________
-
-local void startrun(void)
-{
+// This runs once. 
+local void startrun(void) {
+  printf("startrun\n");
+  startrun_time_0 = wtime();
   bodyptr p1, p2, p;
   stream gravstr;
 
@@ -134,13 +159,14 @@ local void startrun(void)
     strclose(gravstr);
   }
 #endif
+
+  startrun_time_1 = wtime();
 }
 
 //  newrun, oldrun: initialize parameters and bodies.
 //  _________________________________________________
 
-local void newrun(void)
-{
+local void newrun(void) {
   eps = getdparam("eps");			// get input parameters
   dtime = getdparam("dtime");
   nstatic = getiparam("nstatic");
@@ -156,6 +182,8 @@ local void newrun(void)
     inputdata();				// then read inital data
   else {					// else make initial data
     nbody = getiparam("nbody");			// get number of bodies
+    // I added this
+    timesteps = getiparam("timesteps");     // get number of timesteps
     init_random(getiparam("seed"));		// set random number gen.
     testdata();					// and make plummer model
   }
@@ -164,8 +192,7 @@ local void newrun(void)
   tout = tnow;					// schedule first output
 }
 
-local void oldrun(void)
-{
+local void oldrun(void) {
   restorestate(getparam("restore"));		// read in old state file
   if (getparamstat("eps") & ARGPARAM)		// was eps given new value?
     eps = getdparam("eps");			// use command line value
@@ -196,10 +223,13 @@ local void oldrun(void)
 
 #define MFRAC  0.999				// cut off 1-MFRAC of mass
 
-local void testdata(void)
-{
+local void testdata(void) {
   real rsc, vsc, r, v, x, y;
   bodyptr p;
+
+  float scale = 1.0f;
+  float vscale = 1.0f;
+  float mscale = 1.0f;
 
   if (nbody < 1)				// check for silly values
     error("%s: absurd value for nbody\n", getargv0());
@@ -209,7 +239,9 @@ local void testdata(void)
   vsc = rsqrt(1.0 / rsc);			// find speed scale factor
   for (p = bodytab; p < bodytab+nbody; p++) {	// loop over particles
     Type(p) = BODY;				// tag as a body
-    Mass(p) = 1.0 / nbody;			// set masses equal
+    //Mass(p) = 1.0 / nbody;			// set masses equal
+    // Set mass randomly, like in brute
+    Mass(p) = (rand() / (float) RAND_MAX) * mscale;
     x = xrandom(0.0, MFRAC);			// pick enclosed mass
     r = 1.0 / rsqrt(rpow(x, -2.0/3.0) - 1);	// find enclosing radius
     pickshell(Pos(p), NDIM, rsc * r);		// pick position vector
@@ -226,8 +258,7 @@ local void testdata(void)
 //  stepsystem: advance N-body system using simple leap-frog.
 //  _________________________________________________________
 
-local void stepsystem(void)
-{
+local void stepsystem(void) {
   bodyptr p1, p2, p;
 
   p1 = bodytab + MAX(nstatic, 0);		// set dynamic body range
@@ -246,9 +277,7 @@ local void stepsystem(void)
 
 //  treeforce: supervise force calculation.
 //  _______________________________________
-
-local void treeforce(void)
-{
+local void treeforce(void) {
   bodyptr p1, p2, p;
   real r, mr3i;
 

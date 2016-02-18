@@ -78,21 +78,21 @@ void startoutput(void)
     savestate(savefile);			// save initial data
   forcehead = FALSE;				// require header printing
   fflush(NULL);					// empty all output buffers
+  // my code starts
 }
 
 //  forcereport: print staristics on tree construction and force calculation.
 //  _________________________________________________________________________
 
-void forcereport(void)
-{
+void forcereport(void) {
   if (logstr != NULL) {
     if (! forcehead)				// no force header printed?
-      fprintf(logstr, "\n    %8s%8s%8s%8s%12s%12s%8s\n",
-	      "rsize", "tdepth", "ftree",
-	      "nfcalc", "nbbtot", "nbctot", "CPUfc");
-    fprintf(logstr, "    %8.1f%8d%8.3f%8d%12ld%12ld%8.3f\n",
-	    rsize, tdepth, (nbody + ncell - 1) / ((real) ncell),
-	    nfcalc, nbbcalc, nbccalc, cpuforce);
+      //fprintf(logstr, "\n    %8s%8s%8s%8s%12s%12s%8s\n",
+	      //"rsize", "tdepth", "ftree",
+	      //"nfcalc", "nbbtot", "nbctot", "CPUfc");
+    //fprintf(logstr, "    %8.1f%8d%8.3f%8d%12ld%12ld%8.3f\n",
+	    //rsize, tdepth, (nbody + ncell - 1) / ((real) ncell),
+	    //nfcalc, nbbcalc, nbccalc, cpuforce);
     forcehead = TRUE;
     fflush(NULL);				// empty all output buffers
   }
@@ -101,8 +101,7 @@ void forcereport(void)
 //  output: compute diagnostics and output binary data.
 //  ___________________________________________________
 
-void output(void)
-{
+void output(void) {
   real teff;
   int n;
   string outtags[MaxBodyFields];
@@ -113,11 +112,11 @@ void output(void)
 
   diagnostics();				// compute std diagnostics
   if (logstr != NULL) {
-    fprintf(logstr, "\n    %8s%8s%8s%8s%8s%8s%8s%8s\n",
-	    "time", "|T+U|", "T", "-U", "-T/U", "|Vcom|", "|Jtot|", "CPUtot");
-    fprintf(logstr, "    %8.3f%8.4f%8.4f%8.4f%8.5f%8.5f%8.4f%8.2f\n",
-	    tnow, ABS(etot[0]), etot[1], -etot[2], -etot[1]/etot[2],
-	    absv(cmvel), absv(amvec), cputime());
+    //fprintf(logstr, "\n    %8s%8s%8s%8s%8s%8s%8s%8s\n",
+	    //"time", "|T+U|", "T", "-U", "-T/U", "|Vcom|", "|Jtot|", "CPUtot");
+    //fprintf(logstr, "    %8.3f%8.4f%8.4f%8.4f%8.5f%8.5f%8.4f%8.2f\n",
+	   // tnow, ABS(etot[0]), etot[1], -etot[2], -etot[1]/etot[2],
+	   // absv(cmvel), absv(amvec), cputime());
   }
   teff = tnow + dtime/8;			// anticipate slightly...
   if (! strnull(outfile) && teff >= tout) {	// time for data output?
@@ -166,12 +165,29 @@ void output(void)
   forcehead = FALSE;				// insure headers print
   fflush(NULL);					// empty all output buffers
 }
-
+
+void finaloutput() {
+  float startrun = startrun_time_1 - startrun_time_0;
+  float treeforce_initial = treeforce_initial_1 - treeforce_initial_0;
+  float treeforce = treeforce_1 - treeforce_0;
+  float total = startrun + treeforce_initial + treeforce;
+  printf("Timing: \n");
+  printf("startrun: %f \n", startrun);
+  printf("Initial treeforce: %f \n", treeforce);
+  printf("treeforce loop (force calculation): %f \n", treeforce);
+  printf("Total: %f \n", total);
+
+  double flops = 20.0f * (double) N * (double) (N-1) * (double) steps;
+  printf(" GFLOP/s = %f\n", flops / 1000000000.0f / total);
+
+  double bytes = 4.0f * (double) N * 10.0f * (double) steps;
+  printf(" GB/s = %f\n", bytes / 1000000000.0f / total);
+}
+
 //  diagnostics: compute set of dynamical diagnostics.
 //  __________________________________________________
 
-local void diagnostics(void)
-{
+local void diagnostics(void) {
   bodyptr p1, p2, p;
   real mp, velsq;
   vector tmpv;
@@ -242,6 +258,7 @@ void savestate(string pattern)
   put_data(str, "nstep", IntType, &nstep, 0);
   put_data(str, "rsize", RealType, &rsize, 0);
   put_data(str, "nbody", IntType, &nbody, 0);
+  put_data(str, "timesteps", IntType, &nbody, 0);
   put_data(str, "bodytab", AnyType, bodytab, nbody, sizeof(body), 0);
   strclose(str);
 }
@@ -277,6 +294,7 @@ void restorestate(string file)
   get_data(str, "nstep", IntType, &nstep, 0);
   get_data(str, "rsize", RealType, &rsize, 0);
   get_data(str, "nbody", IntType, &nbody, 0);
+  get_data(str, "timesteps", IntType, &nbody, 0);
   bodytab = (bodyptr) allocate(nbody * sizeof(body));
   get_data(str, "bodytab", AnyType, bodytab, nbody, sizeof(body), 0);
   strclose(str);
