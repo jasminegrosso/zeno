@@ -44,29 +44,34 @@ void maketree(bodyptr btab, int nbody) {
   root = makecell();				// allocate the root cell
   CLRV(Pos(root));				// initialize the midpoint
   expandbox(btab, nbody);			// expand to fit bodies
-  for (p = btab; p < btab+nbody; p++)		// loop over all bodies
+  for (p = btab; p < btab+nbody; p++) {		// loop over all bodies
     loadbody(p);				// insert each into tree
+  }
   bh86 = scanopt(options, "bh86");		// set flags for alternate
   sw94 = scanopt(options, "sw94");		// cell opening criteria
   theff = scanopt(options, "theta-eff");
-  if ((bh86 && sw94) || (sw94 && theff) || (theff && bh86))
+  if ((bh86 && sw94) || (sw94 && theff) || (theff && bh86)) {
 						// allow just one at a time
     error("%s.maketree: pick one bh86, sw94, theta-eff\n", getprog());
+  }
   tdepth = 0;					// init count of levels
-  for (i = 0; i < MAXLEVEL; i++)		// and init tree histograms
-    cellhist[i] = subnhist[i] = 0;
+  // for (i = 0; i < MAXLEVEL; i++) {		// and init tree histograms
+  //   cellhist[i] = subnhist[i] = 0;
+  // }
+  memset(cellhist, 0, sizeof(cellhist));
+  memset(subnhist, 0, sizeof(subnhist));
   hackcofm(root, rsize, 0);			// find c-of-m coords, etc
   threadtree((nodeptr) root, NULL);		// add next and more links
-  if (usequad)					// if including quad terms
+  if (usequad) {					// if including quad terms
     hackquad(root);				// find quadrupole moments
+  }
   cputree = cputime() - cpustart;		// store elapsed CPU time
 }
-
+
 //  newtree: reclaim cells in tree, prepare to build new one.
 //  _________________________________________________________
  
-local void newtree(void)
-{
+local void newtree(void) {
   static bool firstcall = TRUE;
   nodeptr p;
  
@@ -74,13 +79,15 @@ local void newtree(void)
     p = (nodeptr) root;				// start with the root
     while (p != NULL)				// loop scanning tree
       if (Type(p) == CELL) {			// if we found a cell
-	Next(p) = freecell;			// then save existing list
-	freecell = p;				// and add it to the front
-	p = More(p);				// then scan down tree
-      } else					// else, skip over bodies
-	p = Next(p);				// by going on to the next
-  } else					// else nothing to reclaim
+      	Next(p) = freecell;			// then save existing list
+      	freecell = p;				// and add it to the front
+      	p = More(p);				// then scan down tree
+      } else {					// else, skip over bodies
+      	p = Next(p);				// by going on to the next
+      }
+  } else {					// else nothing to reclaim
     firstcall = FALSE;				// so just note it
+  }
   root = NULL;					// flush existing tree
   ncell = 0;					// reset cell count
 }
@@ -88,52 +95,59 @@ local void newtree(void)
 //  makecell: return pointer to free cell.
 //  ______________________________________
  
-local cellptr makecell(void)
-{
+local cellptr makecell(void) {
   cellptr c;
   int i;
  
-  if (freecell == NULL)				// if no free cells left
+  if (freecell == NULL)	{			// if no free cells left
     c = (cellptr) allocate(sizeof(cell));	// then allocate a new one
-  else {					// else use existing cell
+  } else {					// else use existing cell
     c = (cellptr) freecell;			// take the one in front
     freecell = Next(c);				// and go on to next one
   }
   Type(c) = CELL;				// initialize node type
   Update(c) = FALSE;				// and force update flag
-  for (i = 0; i < NSUB; i++)			// loop over subcells
+  for (i = 0; i < NSUB; i++) {			// loop over subcells
     Subp(c)[i] = NULL;				// and empty each one
+  }
   ncell++;					// count one more cell
   return (c);					// return pointer to cell
 }
-
+
 //  expandbox: find range of coordinate values (with respect to root)
 //  and expand root cell to fit.  The size is doubled at each step to
 //  take advantage of exact representation of powers of two.
 //  _________________________________________________________________
  
-local void expandbox(bodyptr btab, int nbody)
-{
+local void expandbox(bodyptr btab, int nbody) {
   real dmax, d;
   bodyptr p;
   int k;
- 
+  real *position;
+
+  real *root_a = Pos(root);
+
   dmax = 0.0;					// keep track of max value
-  for (p = btab; p < btab+nbody; p++)		// loop over all bodies
+
+  for (p = btab; p < btab+nbody; p++) {		// loop over all bodies
+    position = Pos(p);
     for (k = 0; k < NDIM; k++) {		// and over all dimensions
-      d = rabs(Pos(p)[k] - Pos(root)[k]);	// find distance to midpnt
-      if (d > dmax)				// if bigger than old one
-	dmax = d;				// store new max value
+      d = rabs(position[k] - root_a[k]);	// find distance to midpnt
+      if (d > dmax) {				// if bigger than old one
+	      dmax = d;				// store new max value
+      }
     }
-  while (rsize < 2 * dmax)			// loop until value fits
+  }
+
+  while (rsize < 2 * dmax) {			// loop until value fits
     rsize = 2 * rsize;				// doubling box each time
+  }
 }
 
 //  loadbody: descend tree and insert body p in appropriate place.
 //  ______________________________________________________________
  
-local void loadbody(bodyptr p)
-{
+local void loadbody(bodyptr p) {
   cellptr q, c;
   int qind, k;
   real qsize;
@@ -145,12 +159,15 @@ local void loadbody(bodyptr p)
     if (Type(Subp(q)[qind]) == BODY) {		// found a body in subcell?
       if (Pos(p)[0] == Pos(Subp(q)[qind])[0] &&
 	  Pos(p)[1] == Pos(Subp(q)[qind])[1] &&
-	  Pos(p)[2] == Pos(Subp(q)[qind])[2])
-	fatal("%s.loadbody: two bodies have same position!\n", getprog());
+	  Pos(p)[2] == Pos(Subp(q)[qind])[2]) {
+	      fatal("%s.loadbody: two bodies have same position!\n", getprog());
+      } 
       c = makecell();				// allocate cell for both
-      for (k = 0; k < NDIM; k++)		// and initialize midpoint
-	Pos(c)[k] = Pos(q)[k] +	(Pos(p)[k]<Pos(q)[k] ? - qsize : qsize) / 4;
-						// set offset from parent
+      for (k = 0; k < NDIM; k++) {		// and initialize midpoint
+	      Pos(c)[k] = 
+            Pos(q)[k] +	(Pos(p)[k]<Pos(q)[k] ? - qsize : qsize) / 4;
+			}
+      			// set offset from parent
       Subp(c)[subindex((bodyptr) Subp(q)[qind], c)] = Subp(q)[qind];
 						// put old body in cell
       Subp(q)[qind] = (nodeptr) c;		// link cell in tree
@@ -161,18 +178,21 @@ local void loadbody(bodyptr p)
   }
   Subp(q)[qind] = (nodeptr) p;			// found place, store p
 }
-
+
 //  subindex: compute subcell index for body p in cell q.
 //  _____________________________________________________
  
-local int subindex(bodyptr p, cellptr q)
-{
+local int subindex(bodyptr p, cellptr q) {
   int ind, k;
+
+  real *position = Pos(p);
  
   ind = 0;					// accumulate subcell index
-  for (k = 0; k < NDIM; k++)			// loop over dimensions
-    if (Pos(q)[k] <= Pos(p)[k])			// if beyond midpoint
+  for (k = 0; k < NDIM; k++) {			// loop over dimensions
+    if (Pos(q)[k] <= position[k]) {			// if beyond midpoint
       ind += NSUB >> (k + 1);			// then skip over subcells
+    }
+  }
   return (ind);
 }
 
@@ -180,73 +200,77 @@ local int subindex(bodyptr p, cellptr q)
 //  also sets critical cell radii, if appropriate.
 //  __________________________________________________________
  
-local void hackcofm(cellptr p, real psize, int lev)
-{
+local void hackcofm(cellptr p, real psize, int lev) {
   vector cmpos, tmpv;
   int i, k;
   nodeptr q;
   real phalf = psize / 2.0;
  
-  if (lev >= MAXLEVEL)				// limit depth of tree
+  if (lev >= MAXLEVEL) {				// limit depth of tree
     fatal("%s.hackcofm: tree depth exceeds maximum!\n", getprog());
+  }
   tdepth = MAX(tdepth, lev);			// remember maximum level
   cellhist[lev]++;				// count cells by level
   Mass(p) = 0.0;				// init cell's total mass
   CLRV(cmpos);					// and center of mass pos
-  for (i = 0; i < NSUB; i++)			// loop over the subnodes
+  for (i = 0; i < NSUB; i++) {			// loop over the subnodes
     if ((q = Subp(p)[i]) != NULL) {		// skipping empty ones
       subnhist[lev]++;				// count existing subnodes
-      if (Type(q) == CELL)			// and if node is a cell
-	hackcofm((cellptr) q, phalf, lev+1);	// then do the same for it
+      if (Type(q) == CELL) {			// and if node is a cell
+	      hackcofm((cellptr) q, phalf, lev+1);	// then do the same for it
+      }
       Update(p) |= Update(q);			// propagate update request
       Mass(p) += Mass(q);			// accumulate total mass
       ADDMULVS(cmpos, Pos(q), Mass(q));		// and center of mass posn
     }
+  }
   if (Mass(p) > 0.0) {				// usually, cell has mass
     DIVVS(cmpos, cmpos, Mass(p));		// so find c-of-m position
   } else {					// but if no mass inside
     SETV(cmpos, Pos(p));			// use centroid position
   }
   SUBV(tmpv, cmpos, Pos(p));
-  if (ABS(tmpv[0])>phalf || ABS(tmpv[1])>phalf || ABS(tmpv[2])>phalf)
+  if (ABS(tmpv[0])>phalf || ABS(tmpv[1])>phalf || ABS(tmpv[2])>phalf) {
     eprintf("[%s.hackcofm: WARNING: center of mass outside cell:\n"
 	    "  psize = %14.8g  lev = %d\n"
 	    "  midp = (%14.8g,%14.8g,%14.8g)\n"
 	    "  cofm = (%14.8g,%14.8g,%14.8g)]\n", getprog(), psize, lev,
 	    Pos(p)[0], Pos(p)[1], Pos(p)[2], cmpos[0], cmpos[1], cmpos[2]);
+  }
 #if !defined(QUICKSCAN)
   setrcrit(p, cmpos, psize);			// set critical radius
 #endif
   SETV(Pos(p), cmpos);				// and center-of-mass pos
 }
-
+
 #if !defined(QUICKSCAN)
 
 //  setrcrit: assign critical radius for cell p, using center-of-mass
 //  position cmpos and cell size psize.
 //  _________________________________________________________________
 
-local void setrcrit(cellptr p, vector cmpos, real psize)
-{
+local void setrcrit(cellptr p, vector cmpos, real psize) {
   real bmax2, d;
   int k;
+
+  real *position = Pos(p);
 
   if (theta == 0.0) {				// if exact calculation
     Rcrit2(p) = rsqr(2 * rsize);		// then always open cells
   } else if (sw94) {				// if using S&W's criterion
     bmax2 = 0.0;				// compute max distance^2
     for (k = 0; k < NDIM; k++) {		// loop over dimensions
-      d = cmpos[k] - Pos(p)[k] + psize/2; 	// get dist from corner
+      d = cmpos[k] - position[k] + psize/2; 	// get dist from corner
       bmax2 += rsqr(MAX(d, psize - d));		// and sum max distance^2
     }
     Rcrit2(p) = bmax2 / rsqr(theta);		// use max dist from cm
   } else if (bh86) {				// if using old criterion
     Rcrit2(p) = rsqr(psize / theta);		// just use size of cell
   } else if (theff) {				// if using effective theta
-    DISTV(d, cmpos, Pos(p));			// find offset from center
+    DISTV(d, cmpos, position);			// find offset from center
     Rcrit2(p) = rsqr(psize / (theta * (eps + psize) / (2*eps + psize)) + d);
   } else {					// else use new criterion
-    DISTV(d, cmpos, Pos(p));			// find offset from center
+    DISTV(d, cmpos, position);			// find offset from center
     Rcrit2(p) = rsqr(psize / theta + d);	// use size plus offset
   }
 }
@@ -257,31 +281,32 @@ local void setrcrit(cellptr p, vector cmpos, real psize)
 //  with next stop n, installing Next and More links.
 //  _________________________________________________________
  
-local void threadtree(nodeptr p, nodeptr n)
-{
+local void threadtree(nodeptr p, nodeptr n) {
   int ndesc, i;
   nodeptr desc[NSUB+1];
  
   Next(p) = n;					// set link to next node
   if (Type(p) == CELL) {			// if descendents to thread
     ndesc = 0;					// start counting them
-    for (i = 0; i < NSUB; i++)			// loop over all subcells
-      if (Subp(p)[i] != NULL)			// if this one is occupied
-	desc[ndesc++] = Subp(p)[i];		// then store it in table
+    for (i = 0; i < NSUB; i++) {			// loop over all subcells
+      if (Subp(p)[i] != NULL) {			// if this one is occupied
+	      desc[ndesc++] = Subp(p)[i];		// then store it in table
+      }
+    }
     More(p) = desc[0];				// set link to 1st one
     desc[ndesc] = n;				// thread last one to next
-    for (i = 0; i < ndesc; i++)			// loop over descendents
+    for (i = 0; i < ndesc; i++)	{		// loop over descendents
       threadtree(desc[i], desc[i+1]);		// and thread them together
+    }
   }
 }
-
+
 //  hackquad: descend tree, evaluating quadrupole moments.  Note that this
 //  routine is coded so that the Subp() and Quad() components of a cell can
 //  share the same memory locations.
 //  _______________________________________________________________________
 
-local void hackquad(cellptr p)
-{
+local void hackquad(cellptr p) {
   int ndesc, i;
   nodeptr desc[NSUB], q;
   vector dr;
@@ -289,14 +314,17 @@ local void hackquad(cellptr p)
   real trQ;
  
   ndesc = 0;					// list descendent subnodes
-  for (i = 0; i < NSUB; i++)			// loop over all subnodes
-    if (Subp(p)[i] != NULL)			// if this one's occupied
+  for (i = 0; i < NSUB; i++) {			// loop over all subnodes
+    if (Subp(p)[i] != NULL)	{		// if this one's occupied
       desc[ndesc++] = Subp(p)[i];		// copy it to safety
+    }
+  }
   CLRM(Quad(p));				// init quadrupole moment
   for (i = 0; i < ndesc; i++) {			// loop over real subnodes
     q = desc[i];				// access ech one in turn
-    if (Type(q) == CELL)			// if it's also a cell
+    if (Type(q) == CELL) {			// if it's also a cell
       hackquad((cellptr) q);			// then process it first
+    }
     SUBV(dr, Pos(q), Pos(p));			// find displacement vect.
     OUTVP(Qtmp, dr, dr);			// form outer prod. of dr
     MULMS(Qtmp, Qtmp, Mass(q));			// scale by mass of subnode
@@ -306,8 +334,9 @@ local void hackquad(cellptr p)
     MULMS(trQM, trQM, trQ/3.0);			// and scale by trace
     SUBM(Qtmp, Qtmp, trQM);			// get traceless quad moment
 #endif
-    if (Type(q) == CELL)			// if subnode is cell
+    if (Type(q) == CELL) {			// if subnode is cell
       ADDM(Qtmp, Qtmp, Quad(q));		// then include its moment
+    }
     ADDM(Quad(p), Quad(p), Qtmp);		// sum cell's quad moment
   }
 }

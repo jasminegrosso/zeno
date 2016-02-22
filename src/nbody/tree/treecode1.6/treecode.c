@@ -104,7 +104,7 @@ int main(int argc, string argv[]) {
     treeforce_initial_1 = wtime();
     output();					// generate initial output
   }
-  if (dtime != 0.0)				// if time steps requested
+  if (dtime != 0.0) {		// if time steps requested
     // TODO: make this work in timesteps?
     treeforce_0 = wtime();
     while (nstep <= timesteps) { // while not past tstop
@@ -116,6 +116,7 @@ int main(int argc, string argv[]) {
     //   output();					// output results each time
     // }
     treeforce_1 = wtime();
+  }
   finaloutput();
   return (0);					// end with proper status
 }
@@ -124,7 +125,6 @@ int main(int argc, string argv[]) {
 //  ___________________________________________
 // This runs once. 
 local void startrun(void) {
-  printf("startrun\n");
   startrun_time_0 = wtime();
   bodyptr p1, p2, p;
   stream gravstr;
@@ -138,17 +138,20 @@ local void startrun(void) {
   infile = getparam("in");			// set I/O file names
   outfile = getparam("out");
   savefile = getparam("save");
-  if (strnull(getparam("restore")))		// starting a new run?
+  if (strnull(getparam("restore")))	{	// starting a new run?
     newrun();
-  else						// else resume old run
+  } else {						// else resume old run
     oldrun();
-  if (ABS(nstatic) > nbody)			// check nstatic is OK
+  }
+  if (ABS(nstatic) > nbody) {			// check nstatic is OK
     error("%s: absurd value for nstatic\n", getargv0());
+  }
   p1 = bodytab + MAX(nstatic, 0);		// set dynamic body range
   p2 = bodytab + nbody + MIN(nstatic, 0);
   testcalc = TRUE;				// determine type of calc:
-  for (p = p1; p < p2; p++)
+  for (p = p1; p < p2; p++) {
     testcalc = testcalc && (Mass(p) == 0);	// look for dynamic masses
+  }
   strfile = getparam("stream");
   logfile = getparam("log");
 #if defined(EXTGRAV)
@@ -178,9 +181,9 @@ local void newrun(void) {
   dtout = getdparam("dtout");
   options = getparam("options");
   outputs = getparam("outputs");
-  if (! strnull(infile))			// if data file was given
+  if (! strnull(infile)) {			// if data file was given
     inputdata();				// then read inital data
-  else {					// else make initial data
+  } else {					// else make initial data
     nbody = getiparam("nbody");			// get number of bodies
     // I added this
     timesteps = getiparam("timesteps");     // get number of timesteps
@@ -194,26 +197,35 @@ local void newrun(void) {
 
 local void oldrun(void) {
   restorestate(getparam("restore"));		// read in old state file
-  if (getparamstat("eps") & ARGPARAM)		// was eps given new value?
+  if (getparamstat("eps") & ARGPARAM)	{	// was eps given new value?
     eps = getdparam("eps");			// use command line value
-  if (getparamstat("nstatic") & ARGPARAM)	// likewise for others...
+  }
+  if (getparamstat("nstatic") & ARGPARAM)	{ // likewise for others...
     nstatic = getiparam("nstatic");
-#if !defined(QUICKSCAN)
-  if (getparamstat("theta") & ARGPARAM)
+  }
+#if !defined(QUICKSCAN) 
+  if (getparamstat("theta") & ARGPARAM) {
     theta = getdparam("theta");
+  }
 #endif
-  if (getparamstat("usequad") & ARGPARAM)
+  if (getparamstat("usequad") & ARGPARAM) {
     usequad = getbparam("usequad");
-  if (getparamstat("options") & ARGPARAM)
+  }
+  if (getparamstat("options") & ARGPARAM) {
     options = getparam("options");
-  if (getparamstat("outputs") & ARGPARAM)
+  }
+  if (getparamstat("outputs") & ARGPARAM) {
     outputs = getparam("outputs");
-  if (getparamstat("tstop") & ARGPARAM)
+  }
+  if (getparamstat("tstop") & ARGPARAM) {
     tstop = getdparam("tstop");
-  if (getparamstat("dtout") & ARGPARAM)
+  }
+  if (getparamstat("dtout") & ARGPARAM) {
     dtout = getdparam("dtout");
-  if (scanopt(options, "new-tout"))		// if output time reset
+  }
+  if (scanopt(options, "new-tout")) {		// if output time reset
     tout = tnow + dtout;			// then offset from now
+  }
 }
 
 //  testdata: generate Plummer model initial conditions for test runs,
@@ -231,8 +243,9 @@ local void testdata(void) {
   float vscale = 1.0f;
   float mscale = 1.0f;
 
-  if (nbody < 1)				// check for silly values
+  if (nbody < 1) {			// check for silly values
     error("%s: absurd value for nbody\n", getargv0());
+  }
   bodytab = (bodyptr) allocate(nbody * sizeof(body));
 						// alloc space for bodies
   rsc = (3 * PI) / 16;				// set length scale factor

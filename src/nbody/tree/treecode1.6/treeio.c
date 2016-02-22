@@ -28,8 +28,7 @@ local vector amvec;				// angular momentum vector
 //  inputdata: read initial conditions from input file.
 //  ___________________________________________________
 
-void inputdata(void)
-{
+void inputdata(void) {
   stream instr;
   string intags[MaxBodyFields];
   bodyptr p;
@@ -37,27 +36,31 @@ void inputdata(void)
   bodytab = NULL;				// request new input data
   instr = stropen(infile, "r");			// open input stream
   get_history(instr);				// read file history data
-  if (! get_snap(instr, &bodytab, &nbody, &tnow, intags, FALSE))
+  if (! get_snap(instr, &bodytab, &nbody, &tnow, intags, FALSE)) {
     error("%s.inputdata: no data in input file\n", getprog());
+  }
   strclose(instr);				// close input stream
   if (! set_member(intags, MassTag) || ! set_member(intags, PosTag) ||
-      ! set_member(intags, VelTag))
+      ! set_member(intags, VelTag)) {
     error("%s.inputdata: essential data missing\n", getprog());
-  if (scanopt(options, "reset-time"))		// reset starting time?
+  }
+  if (scanopt(options, "reset-time")) {		// reset starting time?
     tnow = 0.0;
-  for (p = bodytab; p < bodytab+nbody; p++)	// loop over new bodies
+  }
+  for (p = bodytab; p < bodytab+nbody; p++)	{ // loop over new bodies
     Type(p) = BODY;				// initializing body type
+  }
 }
 
 //  startoutput: begin output to log file.
 //  ______________________________________
 
-void startoutput(void)
-{
-  if (! strnull(logfile))
+void startoutput(void) {
+  if (! strnull(logfile)) {
     logstr = stropen(logfile, "w!");		// always open file if given
-  else
+  } else {
     logstr = (streq(strfile, "-") ? NULL : stdout);	// don't hog stdout
+  }
   if (logstr != NULL) {
     fprintf(logstr, "\n%s\n", headline);	// print headline, params
     fprintf(logstr, "\n%9s%9s%9s%9s", "nbody", "dtime", "nstatic", "eps");
@@ -71,11 +74,13 @@ void startoutput(void)
 #endif
     fprintf(logstr, "%9s%9.5f%9.4f\n",
 	    usequad ? "true" : "false", dtout, tstop);
-    if (! strnull(options))			// print options, if any
+    if (! strnull(options)) {			// print options, if any
       fprintf(logstr, "\n\toptions: %s\n", options);
+    }
   }
-  if (! strnull(savefile))			// was state file given?
+  if (! strnull(savefile)) {			// was state file given?
     savestate(savefile);			// save initial data
+  }
   forcehead = FALSE;				// require header printing
   fflush(NULL);					// empty all output buffers
   // my code starts
@@ -87,12 +92,12 @@ void startoutput(void)
 void forcereport(void) {
   if (logstr != NULL) {
     if (! forcehead)				// no force header printed?
-      //fprintf(logstr, "\n    %8s%8s%8s%8s%12s%12s%8s\n",
-	      //"rsize", "tdepth", "ftree",
-	      //"nfcalc", "nbbtot", "nbctot", "CPUfc");
-    //fprintf(logstr, "    %8.1f%8d%8.3f%8d%12ld%12ld%8.3f\n",
-	    //rsize, tdepth, (nbody + ncell - 1) / ((real) ncell),
-	    //nfcalc, nbbcalc, nbccalc, cpuforce);
+    //   fprintf(logstr, "\n    %8s%8s%8s%8s%12s%12s%8s\n",
+	   //    "rsize", "tdepth", "ftree",
+	   //    "nfcalc", "nbbtot", "nbctot", "CPUfc");
+    // fprintf(logstr, "    %8.1f%8d%8.3f%8d%12ld%12ld%8.3f\n",
+	   //  rsize, tdepth, (nbody + ncell - 1) / ((real) ncell),
+	   //  nfcalc, nbbcalc, nbccalc, cpuforce);
     forcehead = TRUE;
     fflush(NULL);				// empty all output buffers
   }
@@ -121,66 +126,97 @@ void output(void) {
   teff = tnow + dtime/8;			// anticipate slightly...
   if (! strnull(outfile) && teff >= tout) {	// time for data output?
     n = 0;
-    if (scanopt(outputs, PosTag))		// if listed in outputs
+    if (scanopt(outputs, PosTag)) {		// if listed in outputs
       outtags[n++] = PosTag;			// include tag in list
-    if (scanopt(outputs, VelTag))
+    }
+    if (scanopt(outputs, VelTag)) {
       outtags[n++] = VelTag;
-    if (scanopt(outputs, MassTag) || (nstep == 0))
+    }
+    if (scanopt(outputs, MassTag) || (nstep == 0)) {
       outtags[n++] = MassTag;
-    if (scanopt(outputs, PhiTag))
+    }
+    if (scanopt(outputs, PhiTag)) {
       outtags[n++] = PhiTag;			// select potential data
-    if (scanopt(outputs, AccTag))
+    }
+    if (scanopt(outputs, AccTag)) {
       outtags[n++] = AccTag;			// select acceleration data
+    }
     outtags[n] = NULL;
     sprintf(namebuf, outfile, nstep);		// make up output file name
     if (stat(namebuf, &buf) != 0) {		// no output file exists?
       outstr = stropen(namebuf, "w");		// create & open for output
       put_history(outstr);			// write out hiatory data
-    } else					// else file already exists
+    } else {					// else file already exists
       outstr = stropen(namebuf, "a");		// reopen and append output
+    }
     put_snap(outstr, &bodytab, &nbody, &tnow, outtags);
     strclose(outstr);				// close up output file
-    if (logstr != NULL)
+    if (logstr != NULL) {
       fprintf(logstr, "\n\tdata output to file %s at time %f\n",
 	      namebuf, tnow);
+    }
     tout += dtout;				// schedule next output
   }
   if (! strnull(strfile)) {
     if (! streq(strfile, "-")) {
       sprintf(namebuf, strfile, nstep);
       if (stat(namebuf, &buf) != 0) {
-	outstr = stropen(namebuf, "w");
-	put_history(outstr);
-      } else
-	outstr = stropen(namebuf, "a");
-    } else
+      	outstr = stropen(namebuf, "w");
+      	put_history(outstr);
+      } else {
+	      outstr = stropen(namebuf, "a");
+      }
+    } else {
       outstr = stdout;
+    }
     put_snap(outstr, &bodytab, &nbody, &tnow, streamtags);
     fflush(outstr);
-    if (! streq(strfile, "-"))
+    if (! streq(strfile, "-")) {
       strclose(outstr);
+    }
   }
-  if (! strnull(savefile))			// was state file given?
+  if (! strnull(savefile)) {			// was state file given?
     savestate(savefile);			// save data for restart
+  }
   forcehead = FALSE;				// insure headers print
   fflush(NULL);					// empty all output buffers
 }
 
 void finaloutput() {
+  // bodyptr p;
+  // bodyptr btab = (bodyptr) allocate(nbody * sizeof(body));
+  // for (p = btab; p < btab+nbody; p++) {   // loop over all bodies
+  //   printf("%d\n", sizeof(Pos(p))/sizeof(Pos(p)[0]));
+  //   printf("%d\n", absv(Pos(p)));
+  //   printf("%d\n", absv(Pos(p)[0]));
+  //   printf("%d\n", absv(Pos(p)[1]));
+  //   printf("%d\n", absv(Pos(p)[2]));
+  // }
+  // for (int i = 0; i < N; i++) {
+  //   for (int j = 0; j < N; j++) { 
+  //     float rx = x[j] - x[i];
+  //     float ry = y[j] - y[i];
+  //     float rz = z[j] - z[i];
+  //     float r2 = rx*rx + ry*ry + rz*rz + eps;
+  //     float r2inv = 1.0 / sqrt(r2);
+  //     float r6inv = r2inv * r2inv * r2inv;
+  //     phi += m[j] * r6inv;
+  //   }
+  // }
   float startrun = startrun_time_1 - startrun_time_0;
   float treeforce_initial = treeforce_initial_1 - treeforce_initial_0;
   float treeforce = treeforce_1 - treeforce_0;
   float total = startrun + treeforce_initial + treeforce;
   printf("Timing: \n");
   printf("startrun: %f \n", startrun);
-  printf("Initial treeforce: %f \n", treeforce);
+  printf("Initial treeforce: %f \n", treeforce_initial);
   printf("treeforce loop (force calculation): %f \n", treeforce);
   printf("Total: %f \n", total);
 
-  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) steps;
+  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) timesteps;
   printf(" GFLOP/s = %f\n", flops / 1000000000.0f / total);
 
-  double bytes = 4.0f * (double) nbody * 10.0f * (double) steps;
+  double bytes = 4.0f * (double) nbody * 10.0f * (double) timesteps;
   printf(" GB/s = %f\n", bytes / 1000000000.0f / total);
 
 }
@@ -229,12 +265,11 @@ local void diagnostics(void) {
   DIVVS(cmpos, cmpos, mtot);        		// normalize cm coords
   DIVVS(cmvel, cmvel, mtot);
 }
-
+
 //  savestate: write current state to external file.
 //  ________________________________________________
 
-void savestate(string pattern)
-{
+void savestate(string pattern) {
   char namebuf[256];
   stream str;
 
@@ -263,12 +298,11 @@ void savestate(string pattern)
   put_data(str, "bodytab", AnyType, bodytab, nbody, sizeof(body), 0);
   strclose(str);
 }
-
+
 //  restorestate: restore state from external file.
 //  _______________________________________________
 
-void restorestate(string file)
-{
+void restorestate(string file) {
   stream str;
   string program, version;
 

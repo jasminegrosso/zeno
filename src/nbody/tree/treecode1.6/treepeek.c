@@ -32,21 +32,19 @@ local void setupbody(void);			/* set offsets for dynbody  */
  * MAIN: toplevel routine for hierarchical N-body code.
  */
 
-int main(int argc, string argv[])
-{
+int main(int argc, string argv[]){
     initparam(argv, defv);			/* initialize param access  */
     setupbody();				/* interface to dynbody     */
     restorestate(getparam("in"));
     output();
     return (0);					/* end with proper status   */
 }
-
+
 /*
  * SETUPBODY: inform dynamic body routines of relevant body fields.
  */
 
-local void setupbody(void)
-{
+local void setupbody(void) {
     define_body(sizeof(body), Precision, NDIM);
     define_body_offset(PosTag,  BodyOffset(Pos));
     define_body_offset(VelTag,  BodyOffset(Vel));
@@ -59,8 +57,7 @@ local void setupbody(void)
  * OUTPUT: write out snapshot file.
  */
 
-void output(void)
-{
+void output(void) {
     string *outputs;
     char namebuf[256];
     struct stat buf;
@@ -76,13 +73,12 @@ void output(void)
     put_snap(outstr, &bodytab, &nbody, &tnow, outputs);
     strclose(outstr);				/* close up output file     */
 }
-
+
 /*
  * RESTORESTATE: restore state from disk file.
  */
 
-void restorestate(string file)
-{
+void restorestate(string file) {
     stream str;
     string program, version;
     real freq;

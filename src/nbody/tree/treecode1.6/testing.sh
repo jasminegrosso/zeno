@@ -1,35 +1,35 @@
 #!/bin/bash
-stars=1
-timesteps=1
-function treeforce {
+stars=1000
+timesteps=1000
+function run_treecode {
   run=$(./treecode nbody=$stars timesteps=$timesteps )
   var=0
   for x in $run; do 
-    #echo $x
+    # echo $x
     var=$((var+1))
     # startrun
-    if [ $var -eq 25 ]
+    if [ $var -eq 24 ]
       then
         echo startrun $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
     # Initial Treeforce
-    if [ $var -eq 28 ]
+    if [ $var -eq 27 ]
       then
         echo Initial Treeforce $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
     # Treeforce Loop
-    if [ $var -eq 33 ]
+    if [ $var -eq 32 ]
       then
         echo Treeforce loop $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
     # Total
-    if [ $var -eq 35 ]
+    if [ $var -eq 34 ]
       then
         echo Total $x
         printf $x >> test.csv

@@ -41,12 +41,14 @@ void gravcalc(void) {
  
   if (active == NULL) {				// if this is the 1st call
     actmax = FACTIVE * 216 * (tdepth + 1);	// estimate list length
+
 #if !defined(QUICKSCAN)
     if (theta > 0.1)
       actmax = actmax * rpow(theta,-2.5);	// allow for opening angle
     else
       actmax = 5.0 * ncell;			// guess total node count
 #endif
+
     active = (nodeptr *) allocate(actmax * sizeof(nodeptr));
     interact = (cellptr) allocate(actmax * sizeof(cell));
   }
@@ -58,7 +60,7 @@ void gravcalc(void) {
 	   (nodeptr) root, rsize, rmid);	// scan tree, update forces
   cpuforce = cputime() - cpustart;		// store CPU time w/o alloc
 }
-
+
 //  walktree: do a complete walk of the tree, building the interaction
 //  list level-by-level and computing the resulting force on each body.
 //  ___________________________________________________________________
@@ -74,50 +76,54 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
     actsafe = actmax - NSUB;			// leave room for NSUB more
     for (ap = aptr; ap < nptr; ap++) {		// loop over active nodes
       if (Type(*ap) == CELL) {			// is this node a cell?
-	if (accept(*ap, psize, pmid)) {		// does it pass the test?
-	  if (Mass(*ap) > 0.0) {		// and contribute to field?
-	    Mass(cptr) = Mass(*ap);		// copy to interaction list
-	    SETV(Pos(cptr), Pos(*ap));
-#if defined(SOFTCORR)
-	    TRACEM(Trace(cptr), Quad(*ap));	// save trace in copy
-	    SETMI(trQM);
-	    MULMS(trQM, trQM, Trace(cptr)/3);
-	    SUBM(Quad(cptr), Quad(*ap), trQM);	// store traceless moment
-#else
-	    SETM(Quad(cptr), Quad(*ap));	// copy traceless moment
-#endif
-	    cptr++;				// and bump cell array ptr
-	  }
-	} else {				// this cell fails the test
-	  if (np - active >= actsafe)		// make sure list has room
-	    fatal("%s.walktree: active list overflow\n", getprog());
-	  for (q = More(*ap); q != Next(*ap); q = Next(q))
-						// loop over all subcells
-	    *np++= q;				// put them on active list
-	}
-      } else					// else this node is a body
-	if (*ap != p && Mass(*ap) > 0.0) {	// not self-interaction?
-	  --bptr;				// bump body array ptr
-	  Mass(bptr) = Mass(*ap);		// and copy data to array
-	  SETV(Pos(bptr), Pos(*ap));
-	}
+      	if (accept(*ap, psize, pmid)) {		// does it pass the test?
+      	  if (Mass(*ap) > 0.0) {		// and contribute to field?
+      	    Mass(cptr) = Mass(*ap);		// copy to interaction list
+      	    SETV(Pos(cptr), Pos(*ap));
+      #if defined(SOFTCORR)
+      	    TRACEM(Trace(cptr), Quad(*ap));	// save trace in copy
+      	    SETMI(trQM);
+      	    MULMS(trQM, trQM, Trace(cptr)/3);
+      	    SUBM(Quad(cptr), Quad(*ap), trQM);	// store traceless moment
+      #else
+      	    SETM(Quad(cptr), Quad(*ap));	// copy traceless moment
+      #endif
+      	    cptr++;				// and bump cell array ptr
+      	  }
+      	} else {				// this cell fails the test
+      	  if (np - active >= actsafe) {		// make sure list has room
+      	    fatal("%s.walktree: active list overflow\n", getprog());
+          }  
+      	  for (q = More(*ap); q != Next(*ap); q = Next(q)) {
+      						// loop over all subcells
+      	    *np++= q;				// put them on active list
+          }
+      	}
+      } else {					// else this node is a body
+      	if (*ap != p && Mass(*ap) > 0.0) {	// not self-interaction?
+      	  --bptr;				// bump body array ptr
+      	  Mass(bptr) = Mass(*ap);		// and copy data to array
+      	  SETV(Pos(bptr), Pos(*ap));
+      	}
+      }
     }
     acttot = MAX(acttot, np - active);		// keep track of max active
     if (np != nptr) {				// if new actives were added
       walksub(nptr, np, cptr, bptr, p, psize, pmid);
 						// then visit next level
     } else {					// else no actives left
-      if (Type(p) != BODY)			// make sure we got a body
+      if (Type(p) != BODY) {			// make sure we got a body
 	fatal("%s.walktree: recursion terminated with cell\n"
 	      "  p = 0x%x  psize   = %.8f  Mass(p) = %g\n"
 	      "  pmid =   (%.8f,%.8f,%.8f)\n  Pos(p) = (%.8f,%.8f,%.8f)\n",
 	      getprog(), (int) p, psize, Mass(p),
 	      pmid[0], pmid[1], pmid[2], Pos(p)[0], Pos(p)[1], Pos(p)[2]);
+      }
       gravsum((bodyptr) p, cptr, bptr);		// sum force on this body
     }
   }
 }
-
+
 #if defined(QUICKSCAN)
  
 //  accept: quick criterion accepts any cell not touching cell p.
@@ -128,14 +134,17 @@ local bool accept(nodeptr c, real psize, vector pmid) {
  
   p15 = ((real) 1.5) * psize;			// premultiply cell size
   dk = Pos(c)[0] - pmid[0];			// find distance to midpnt
-  if (ABS(dk) > p15)				// if c does not touch p
+  if (ABS(dk) > p15) {				// if c does not touch p
     return (TRUE);				// then accept interaction
+  }
   dk = Pos(c)[1] - pmid[1];			// find distance to midpnt
-  if (ABS(dk) > p15)				// if c does not touch p
+  if (ABS(dk) > p15) {				// if c does not touch p
     return (TRUE);				// then accept interaction
+  }
   dk = Pos(c)[2] - pmid[2];			// find distance to midpnt
-  if (ABS(dk) > p15)				// if c does not touch p
+  if (ABS(dk) > p15) {				// if c does not touch p
     return (TRUE);				// then accept interaction
+  }
   return (FALSE);				// else do not accept it
 }
  
@@ -153,20 +162,23 @@ local bool accept(nodeptr c, real psize, vector pmid) {
   dsq = 0.0;                                    // and squared min distance
   for (k = 0; k < NDIM; k++) {                  // loop over space dims
     dk = Pos(c)[k] - pmid[k];                   // form distance to midpnt
-    if (dk < 0)                                 // and get absolute value
+    if (dk < 0) {                                 // and get absolute value
       dk = - dk;
-    if (dk > dmax)                              // keep track of max value
+    }
+    if (dk > dmax) {                              // keep track of max value
       dmax = dk;
+    }
     dk -= ((real) 0.5) * psize;                 // allow for size of cell
-    if (dk > 0)
+    if (dk > 0) {
       dsq += dk * dk;                           // sum (min dist to cell)^2
+    }
   }
   return (dsq > Rcrit2(c) &&                    // test angular criterion
 	  dmax > ((real) 1.5) * psize);         // and adjacency criterion
 }
  
 #endif
-
+
 //  walksub: test next level's active list against subnodes of p.
 //  _____________________________________________________________
  
@@ -176,16 +188,25 @@ local void walksub(nodeptr *nptr, nodeptr *np, cellptr cptr, cellptr bptr,
   int k;
   vector qmid;
  
-  if (Type(p) == CELL) {                        // fanout over descendents
+  // fanout over descendents
+  if (Type(p) == CELL) {
+    // for (k = 0; k < NDIM; k++) {
+    //   for (q = More(p); q != Next(p); q = Next(q)) {
+    //     qmid[k] = pmid[k] + (Pos(q)[k] < pmid[k] ? - psize : psize) / 4;
+    //     walktree(nptr, np, cptr, bptr, q, psize / 2, qmid);
+    //   }
+    // }
     for (q = More(p); q != Next(p); q = Next(q)) {
-                                                // loop over all subcells
-      for (k = 0; k < NDIM; k++)                // set subcell's midpoint
-	qmid[k] = pmid[k] + (Pos(q)[k] < pmid[k] ? - psize : psize) / 4;
-      walktree(nptr, np, cptr, bptr, q, psize / 2, qmid);
-                                                // recurse on subcell
+      // loop over all subcells
+      for (k = 0; k < NDIM; k++)
+        // set subcell's midpoint
+	      qmid[k] = pmid[k] + (Pos(q)[k] < pmid[k] ? - psize : psize) / 4;
+        // recurse on subcell
+        walktree(nptr, np, cptr, bptr, q, psize / 2, qmid);
     }
-  } else {                                      // extend "virtual" tree
-    for (k = 0; k < NDIM; k++)                  // set virtual midpoint
+  } else { // extend "virtual" tree
+    // set virtual midpoint
+    for (k = 0; k < NDIM; k++)
       qmid[k] = pmid[k] + (Pos(p)[k] < pmid[k] ? - psize : psize) / 4;
     walktree(nptr, np, cptr, bptr, p, psize / 2, qmid);
                                                 // and search next level
@@ -202,10 +223,11 @@ local void gravsum(bodyptr p0, cellptr cptr, cellptr bptr) {
   SETV(pos0, Pos(p0));                          // copy position of body
   phi0 = 0.0;                                   // init total potential
   CLRV(acc0);                                   // and total acceleration
-  if (usequad)                                  // if using quad moments
+  if (usequad) {                                  // if using quad moments
     sumcell(interact, cptr, pos0, &phi0, acc0); // sum cell forces w quads
-  else                                          // not using quad moments
+  } else {                                         // not using quad moments
     sumnode(interact, cptr, pos0, &phi0, acc0); // sum cell forces wo quads
+  }
   sumnode(bptr, interact + actmax, pos0, &phi0, acc0);
                                                 // sum forces from bodies
   Phi(p0) = phi0;                               // store total potential
@@ -241,6 +263,7 @@ local void sumnode(cellptr start, cellptr finish,
 
 local void sumcell(cellptr start, cellptr finish, vector pos0,
 		   real *phi0, vector acc0) {
+  
   real eps2, eps2thrd, dr2, dr2i, dr1i, mdr1i, mdr3i, qdr2, dr5i, phi_q;
   vector dr, qdr;
  
