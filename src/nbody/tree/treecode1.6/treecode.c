@@ -171,6 +171,7 @@ local void startrun(void) {
     error("%s: absurd value for nstatic\n", getargv0());
   p1 = bodytab + MAX(nstatic, 0);		// set dynamic body range
   p2 = bodytab + nbody + MIN(nstatic, 0);
+
   testcalc = TRUE;				// determine type of calc:
   int vector_size = (nbody/4)*4;
   p = p1;
@@ -186,17 +187,13 @@ local void startrun(void) {
   // printf("%d\n", mass_addr);
   // printf("%d\n", pos_addr);
   float testcalc_int = 1.0;
-  //float temp;
   // Load testcalc into a vector called tc.
   __m128 tc = _mm_load_ps1(&testcalc_int);
-  // _mm_store_ps1(&temp, tc);
-  // printf("temp: %f\n", temp);
 
   float zero = 0.0;
   __m128 zero_v = _mm_load_ps1(&zero);
   int new = 0;
   for (int i = 0; i < vector_size; i+=4) {
-    printf("RUNNING LOOP\n");
     // If testcalc ever becomes false, it can never be true again, 
     // so just break out of loop. 
     if (testcalc_int == 0) {
@@ -209,15 +206,8 @@ local void startrun(void) {
     // 0xffffffff : 0 (true:false)
     __m128 result = _mm_cmpeq_ps(mass_v, zero_v);
     // If any of the results were false, want to set testcalc_int to false.
-
-    // float temp;
-    // _mm_store_ps1(&temp, result);
-    // printf("temp: %f\n", temp);
-
     _mm_store_ps1(a+1, result);
-
     if (a[0] == 0 || a[1] == 0 || a[2] == 0 || a[3] == 0) {
-      printf("ONE OF THEM WAS FALSE\n");
       testcalc_int = 0.0;
     }
     p += 4;
@@ -350,10 +340,10 @@ local void testdata(void) {
     pickshell(Vel(p), NDIM, vsc * v);		// pick velocity vector
     i++;
   }
-  printf("Masses initialised to: \n");
-  for (int j = 0; j < nbody; j++) {
-    printf("%f\n", masses[j]);
-  }
+  // printf("Masses initialised to: \n");
+  // for (int j = 0; j < nbody; j++) {
+  //   printf("%f\n", masses[j]);
+  // }
   tnow = 0.0;					// set elapsed model time
 }
 
@@ -380,7 +370,6 @@ local void stepsystem(void) {
 //  treeforce: supervise force calculation.
 //  _______________________________________
 local void treeforce(void) {
-  printf("TREEFORCE\n");
   bodyptr p1, p2, p;
   real r, mr3i;
 
