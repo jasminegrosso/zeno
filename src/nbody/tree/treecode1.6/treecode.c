@@ -11,6 +11,8 @@
 #include <sys/times.h>
 #include <sys/resource.h>
 
+#include <immintrin.h>
+
 //  Default values for input parameters.
 //  ____________________________________
 
@@ -75,6 +77,8 @@ local void testdata(void);			// generate test data
 local void stepsystem(void);			// advance by one time-step
 local void treeforce(void);			// do force calculation
 
+global float *masses;
+
 #if defined(EXTGRAV)
 #include "gsp.h"
 gsprof *gravgsp = NULL;				// GSP for external field
@@ -97,6 +101,9 @@ int main(int argc, string argv[]) {
   initparam(argv, defv);			// initialize param access
   headline = defv[0] + 1;			// use default headline
   startrun();					// get params & input data
+  global int x[nbody];
+  global int y[nbody];
+  global int z[nbody];
   startoutput();				// activate output code
   if (nstep == 0) {				// if data just initialized
     treeforce_initial_0 = wtime();
@@ -117,6 +124,24 @@ int main(int argc, string argv[]) {
     // }
     treeforce_1 = wtime();
   finaloutput();
+  bodyptr p;
+  bodyptr q;
+  float phi = 0.0f;
+  for (p = bodytab; p < bodytab+nbody; p++) {// loop over all bodies
+    for (q = bodytab; q < bodytab+nbody; q++) {// loop over all bodies
+    //  printf("Pos(p) = (%.8f,%.8f,%.8f)\n",  Pos(p)[0], Pos(p)[1], Pos(p)[2]);
+    //  printf("Pos(q) = (%.8f,%.8f,%.8f)\n",  Pos(q)[0], Pos(q)[1], Pos(q)[2]);
+      float rx = Pos(q)[0] - Pos(p)[0];
+      float ry = Pos(q)[1] - Pos(p)[1];
+      float rz = Pos(q)[2] - Pos(p)[2];
+      float r2 = rx*rx + ry*ry + rz*rz + eps;
+      float r2inv = 1.0 / sqrt(r2);
+      float r6inv = r2inv * r2inv * r2inv;
+      float mass = Mass(q);
+      phi += mass * r6inv;
+    }
+  }
+  printf(" Answer = %f\n", phi);
   return (0);					// end with proper status
 }
 
@@ -147,8 +172,76 @@ local void startrun(void) {
   p1 = bodytab + MAX(nstatic, 0);		// set dynamic body range
   p2 = bodytab + nbody + MIN(nstatic, 0);
   testcalc = TRUE;				// determine type of calc:
-  for (p = p1; p < p2; p++)
-    testcalc = testcalc && (Mass(p) == 0);	// look for dynamic masses
+  int vector_size = (nbody/4)*4;
+  p = p1;
+  float *a = _mm_malloc(sizeof(float) * nbody,64);
+   // int* type_addr = &Type(p);
+  // int* update_addr = &Update(p);
+  // int* node_addr = &Next(p);
+  // int* mass_addr = &Mass(p);
+  // int* pos_addr = &Pos(p);
+  // printf("%d\n", type_addr);
+  // printf("%d\n", update_addr);
+  // printf("%d\n", node_addr);
+  // printf("%d\n", mass_addr);
+  // printf("%d\n", pos_addr);
+  float testcalc_int = 1.0;
+  //float temp;
+  // Load testcalc into a vector called tc.
+  __m128 tc = _mm_load_ps1(&testcalc_int);
+  // _mm_store_ps1(&temp, tc);
+  // printf("temp: %f\n", temp);
+
+  float zero = 0.0;
+  __m128 zero_v = _mm_load_ps1(&zero);
+  int new = 0;
+  for (int i = 0; i < vector_size; i+=4) {
+    printf("RUNNING LOOP\n");
+    // If testcalc ever becomes false, it can never be true again, 
+    // so just break out of loop. 
+    if (testcalc_int == 0) {
+      break;
+    } 
+    // Load masses into vector.
+    __m128 mass_v = _mm_load_ps(masses+i);
+
+    // Want to compare the masses with 0, if true store true in testcalc.
+    // 0xffffffff : 0 (true:false)
+    __m128 result = _mm_cmpeq_ps(mass_v, zero_v);
+    // If any of the results were false, want to set testcalc_int to false.
+
+    // float temp;
+    // _mm_store_ps1(&temp, result);
+    // printf("temp: %f\n", temp);
+
+    _mm_store_ps1(a+1, result);
+
+    if (a[0] == 0 || a[1] == 0 || a[2] == 0 || a[3] == 0) {
+      printf("ONE OF THEM WAS FALSE\n");
+      testcalc_int = 0.0;
+    }
+    p += 4;
+    new++;
+  }
+  if (testcalc_int == 0) {
+    testcalc = FALSE;
+  } else {
+    testcalc = TRUE;
+  }
+  for (; p < p2; p++) {
+    if (testcalc_int == 0) {
+      break;
+    }
+    testcalc = testcalc && (Mass(p) == 0);
+    new++;
+  }
+  int old;
+  // for (p = p1; p < p2; p++) {
+  //   old++;
+  //   testcalc = testcalc && (Mass(p) == 0);	// look for dynamic masses
+  // }
+  printf("Old: %d\n", old);
+  printf("New: %d\n", new);
   strfile = getparam("stream");
   logfile = getparam("log");
 #if defined(EXTGRAV)
@@ -237,11 +330,15 @@ local void testdata(void) {
 						// alloc space for bodies
   rsc = (3 * PI) / 16;				// set length scale factor
   vsc = rsqrt(1.0 / rsc);			// find speed scale factor
+  int i = 0;
+  masses = malloc(sizeof(int)*nbody);
   for (p = bodytab; p < bodytab+nbody; p++) {	// loop over particles
     Type(p) = BODY;				// tag as a body
     //Mass(p) = 1.0 / nbody;			// set masses equal
     // Set mass randomly, like in brute
-    Mass(p) = (rand() / (float) RAND_MAX) * mscale;
+    float mass = (rand() / (float) RAND_MAX) * mscale;
+    Mass(p) = mass;
+    masses[i] = mass;
     x = xrandom(0.0, MFRAC);			// pick enclosed mass
     r = 1.0 / rsqrt(rpow(x, -2.0/3.0) - 1);	// find enclosing radius
     pickshell(Pos(p), NDIM, rsc * r);		// pick position vector
@@ -251,6 +348,11 @@ local void testdata(void) {
     } while (y > x*x * rpow(1 - x*x, 3.5));	// using von Neumann tech
     v = x * rsqrt(2.0 / rsqrt(1 + r*r));	// find resulting speed
     pickshell(Vel(p), NDIM, vsc * v);		// pick velocity vector
+    i++;
+  }
+  printf("Masses initialised to: \n");
+  for (int j = 0; j < nbody; j++) {
+    printf("%f\n", masses[j]);
   }
   tnow = 0.0;					// set elapsed model time
 }
@@ -278,13 +380,16 @@ local void stepsystem(void) {
 //  treeforce: supervise force calculation.
 //  _______________________________________
 local void treeforce(void) {
+  printf("TREEFORCE\n");
   bodyptr p1, p2, p;
   real r, mr3i;
 
   p1 = bodytab + MAX(nstatic, 0);		// set dynamic body range
   p2 = bodytab + nbody + MIN(nstatic, 0);
-  for (p = bodytab; p < bodytab+nbody; p++)	// loop over all bodies
+  for (p = bodytab; p < bodytab+nbody; p++)	{// loop over all bodies
     Update(p) = (testcalc ? p1 <= p && p < p2 : TRUE);
+  //printf("Pos(p) = (%.8f,%.8f,%.8f)\n",  Pos(p)[0], Pos(p)[1], Pos(p)[2]);
+}
 						// flag bodies to update
   maketree(bodytab, nbody);			// construct tree structure
   gravcalc();					// compute current forces

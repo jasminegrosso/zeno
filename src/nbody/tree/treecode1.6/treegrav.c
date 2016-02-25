@@ -104,6 +104,11 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
     }
     acttot = MAX(acttot, np - active);		// keep track of max active
     if (np != nptr) {				// if new actives were added
+      // printf("%s.walktree: recursion terminated with cell\n"
+      //   "  p = 0x%x  psize   = %.8f  Mass(p) = %g\n"
+      //   "  pmid =   (%.8f,%.8f,%.8f)\n  Pos(p) = (%.8f,%.8f,%.8f)\n",
+      //   getprog(), (int) p, psize, Mass(p),
+      //   pmid[0], pmid[1], pmid[2], Pos(p)[0], Pos(p)[1], Pos(p)[2]);
       walksub(nptr, np, cptr, bptr, p, psize, pmid);
 						// then visit next level
     } else {					// else no actives left

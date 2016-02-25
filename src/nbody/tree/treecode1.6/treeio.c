@@ -167,20 +167,26 @@ void output(void) {
 }
 
 void finaloutput() {
+  bodyptr p1, p2, p;
+  bodyptr bodytab = (bodyptr) allocate(nbody * sizeof(body));
+  for (p = bodytab; p < bodytab+nbody; p++) { 
+    // printf("Pos(p) = (%.8f,%.8f,%.8f)\n",  Pos(p)[0], Pos(p)[1], Pos(p)[2]);
+  }
+
   float startrun = startrun_time_1 - startrun_time_0;
   float treeforce_initial = treeforce_initial_1 - treeforce_initial_0;
   float treeforce = treeforce_1 - treeforce_0;
   float total = startrun + treeforce_initial + treeforce;
   printf("Timing: \n");
   printf("startrun: %f \n", startrun);
-  printf("Initial treeforce: %f \n", treeforce);
+  printf("Initial treeforce: %f \n", treeforce_initial);
   printf("treeforce loop (force calculation): %f \n", treeforce);
   printf("Total: %f \n", total);
 
-  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) steps;
+  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) timesteps;
   printf(" GFLOP/s = %f\n", flops / 1000000000.0f / total);
 
-  double bytes = 4.0f * (double) nbody * 10.0f * (double) steps;
+  double bytes = 4.0f * (double) nbody * 10.0f * (double) timesteps;
   printf(" GB/s = %f\n", bytes / 1000000000.0f / total);
 
 }

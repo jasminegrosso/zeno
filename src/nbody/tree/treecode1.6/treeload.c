@@ -148,8 +148,9 @@ local void loadbody(bodyptr p)
 	  Pos(p)[2] == Pos(Subp(q)[qind])[2])
 	fatal("%s.loadbody: two bodies have same position!\n", getprog());
       c = makecell();				// allocate cell for both
-      for (k = 0; k < NDIM; k++)		// and initialize midpoint
-	Pos(c)[k] = Pos(q)[k] +	(Pos(p)[k]<Pos(q)[k] ? - qsize : qsize) / 4;
+      for (k = 0; k < NDIM; k++) {		// and initialize midpoint
+      	Pos(c)[k] = Pos(q)[k] +	(Pos(p)[k]<Pos(q)[k] ? - qsize : qsize) / 4;
+      }
 						// set offset from parent
       Subp(c)[subindex((bodyptr) Subp(q)[qind], c)] = Subp(q)[qind];
 						// put old body in cell

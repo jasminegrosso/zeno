@@ -10,7 +10,7 @@ OPT = -O3
 ########################################################################
 # Build vanilla treecode; by default, includes softening correction.
 
-OPTIONS = -DSOFTCORR
+OPTIONS = -DSOFTCORR 
 
 treecode$X: treecode$X.o treeio$X.o treeload$X.o treegrav$X.o
 	$(ZCC) $(ZLDFLAGS) -o treecode$X \
