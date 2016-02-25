@@ -173,65 +173,51 @@ local void startrun(void) {
   p2 = bodytab + nbody + MIN(nstatic, 0);
 
   testcalc = TRUE;				// determine type of calc:
+  //START OF FIRST OPTIMISATION
   int vector_size = (nbody/4)*4;
   p = p1;
-  float *a = _mm_malloc(sizeof(float) * nbody,64);
-   // int* type_addr = &Type(p);
-  // int* update_addr = &Update(p);
-  // int* node_addr = &Next(p);
-  // int* mass_addr = &Mass(p);
-  // int* pos_addr = &Pos(p);
-  // printf("%d\n", type_addr);
-  // printf("%d\n", update_addr);
-  // printf("%d\n", node_addr);
-  // printf("%d\n", mass_addr);
-  // printf("%d\n", pos_addr);
-  float testcalc_int = 1.0;
-  // Load testcalc into a vector called tc.
-  __m128 tc = _mm_load_ps1(&testcalc_int);
+
+  __m128 tc = _mm_setzero_ps();
 
   float zero = 0.0;
   __m128 zero_v = _mm_load_ps1(&zero);
   int new = 0;
+
+  float *a = _mm_malloc(sizeof(float) * nbody,64);
+
   for (int i = 0; i < vector_size; i+=4) {
-    // If testcalc ever becomes false, it can never be true again, 
-    // so just break out of loop. 
-    if (testcalc_int == 0) {
-      break;
-    } 
     // Load masses into vector.
     __m128 mass_v = _mm_load_ps(masses+i);
 
     // Want to compare the masses with 0, if true store true in testcalc.
     // 0xffffffff : 0 (true:false)
     __m128 result = _mm_cmpeq_ps(mass_v, zero_v);
-    // If any of the results were false, want to set testcalc_int to false.
-    _mm_store_ps1(a+1, result);
-    if (a[0] == 0 || a[1] == 0 || a[2] == 0 || a[3] == 0) {
-      testcalc_int = 0.0;
-    }
-    p += 4;
-    new++;
-  }
-  if (testcalc_int == 0) {
-    testcalc = FALSE;
-  } else {
-    testcalc = TRUE;
-  }
-  for (; p < p2; p++) {
-    if (testcalc_int == 0) {
+    // Add up all the values in the result, if it's equal to -4, 
+    // then all of the values of Mass(p) evaluated to true. If not, 
+    // one of them was false so testcalc should be false. 
+    int f[4];
+    _mm_storeu_ps((float*) f, result);
+
+    int total = (int)f[0] + (int)f[1] + (int)f[2] + (int)f[3];
+    // If masses don't add up to -4, then one of them wasn't 0, so
+    // break out of loop. 
+    if (total != -4) {
+      testcalc = FALSE;
       break;
     }
-    testcalc = testcalc && (Mass(p) == 0);
-    new++;
+
+    p += 4;
   }
-  int old;
+  _mm_free(a);
+  if (testcalc) {
+    for (; p < p2; p++) {
+      testcalc = testcalc && (Mass(p) == 0);
+    }
+  }
+  //END OF FIRST OPTIMISAION
   // for (p = p1; p < p2; p++) {
-  //   old++;
   //   testcalc = testcalc && (Mass(p) == 0);	// look for dynamic masses
   // }
-  printf("Old: %d\n", old);
-  printf("New: %d\n", new);
   strfile = getparam("stream");
   logfile = getparam("log");
 #if defined(EXTGRAV)
@@ -327,6 +313,7 @@ local void testdata(void) {
     //Mass(p) = 1.0 / nbody;			// set masses equal
     // Set mass randomly, like in brute
     float mass = (rand() / (float) RAND_MAX) * mscale;
+    //float mass = 0;
     Mass(p) = mass;
     masses[i] = mass;
     x = xrandom(0.0, MFRAC);			// pick enclosed mass
