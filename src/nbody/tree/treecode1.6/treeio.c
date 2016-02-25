@@ -173,14 +173,14 @@ void finaloutput() {
   float total = startrun + treeforce_initial + treeforce;
   printf("Timing: \n");
   printf("startrun: %f \n", startrun);
-  printf("Initial treeforce: %f \n", treeforce);
+  printf("Initial treeforce: %f \n", treeforce_initial);
   printf("treeforce loop (force calculation): %f \n", treeforce);
   printf("Total: %f \n", total);
 
-  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) steps;
+  double flops = 20.0f * (double) nbody * (double) (nbody-1) * (double) timesteps;
   printf(" GFLOP/s = %f\n", flops / 1000000000.0f / total);
 
-  double bytes = 4.0f * (double) nbody * 10.0f * (double) steps;
+  double bytes = 4.0f * (double) nbody * 10.0f * (double) timesteps;
   printf(" GB/s = %f\n", bytes / 1000000000.0f / total);
 
 }

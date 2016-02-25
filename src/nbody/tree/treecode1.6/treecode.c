@@ -117,6 +117,24 @@ int main(int argc, string argv[]) {
     // }
     treeforce_1 = wtime();
   finaloutput();
+  bodyptr p;
+  bodyptr q;
+  float phi = 0.0f;
+  for (p = bodytab; p < bodytab+nbody; p++) {// loop over all bodies
+    for (q = bodytab; q < bodytab+nbody; q++) {// loop over all bodies
+    //  printf("Pos(p) = (%.8f,%.8f,%.8f)\n",  Pos(p)[0], Pos(p)[1], Pos(p)[2]);
+    //  printf("Pos(q) = (%.8f,%.8f,%.8f)\n",  Pos(q)[0], Pos(q)[1], Pos(q)[2]);
+      float rx = Pos(q)[0] - Pos(p)[0];
+      float ry = Pos(q)[1] - Pos(p)[1];
+      float rz = Pos(q)[2] - Pos(p)[2];
+      float r2 = rx*rx + ry*ry + rz*rz + eps;
+      float r2inv = 1.0 / sqrt(r2);
+      float r6inv = r2inv * r2inv * r2inv;
+      float mass = Mass(q);
+      phi += mass * r6inv;
+    }
+  }
+  printf(" Answer = %f\n", phi);
   return (0);					// end with proper status
 }
 
