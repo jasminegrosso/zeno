@@ -1,6 +1,6 @@
 #!/bin/bash
-stars=10000
-timesteps=10000
+stars=1000
+timesteps=1000
 function run_treecode {
   run=$(./treecode nbody=$stars timesteps=$timesteps )
   var=0

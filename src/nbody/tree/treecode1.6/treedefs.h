@@ -48,6 +48,7 @@ typedef struct _node {
 #define BODY 01                 // type code for bodies
 #define CELL 02                 // type code for cells
 
+
 //  body: data structure used to represent particles.
 //  _________________________________________________
  

@@ -78,6 +78,15 @@ local void stepsystem(void);			// advance by one time-step
 local void treeforce(void);			// do force calculation
 
 global float *masses;
+global float *x_pos;
+global float *y_pos;
+global float *z_pos;
+global float *vx;
+global float *vy;
+global float *vz;
+global float *ax;
+global float *ay;
+global float *az;
 
 #if defined(EXTGRAV)
 #include "gsp.h"
@@ -174,7 +183,7 @@ local void startrun(void) {
 
   testcalc = TRUE;				// determine type of calc:
   //START OF FIRST OPTIMISATION
-  int vector_size = (nbody/4)*4;
+ /* int vector_size = (nbody/4)*4;
   p = p1;
 
   __m128 tc = _mm_setzero_ps();
@@ -213,11 +222,11 @@ local void startrun(void) {
     for (; p < p2; p++) {
       testcalc = testcalc && (Mass(p) == 0);
     }
-  }
+  }*/
   //END OF FIRST OPTIMISAION
-  // for (p = p1; p < p2; p++) {
-  //   testcalc = testcalc && (Mass(p) == 0);	// look for dynamic masses
-  // }
+  for (p = p1; p < p2; p++) {
+    testcalc = testcalc && (Mass(p) == 0);	// look for dynamic masses
+  }
   strfile = getparam("stream");
   logfile = getparam("log");
 #if defined(EXTGRAV)
@@ -308,6 +317,16 @@ local void testdata(void) {
   vsc = rsqrt(1.0 / rsc);			// find speed scale factor
   int i = 0;
   masses = malloc(sizeof(int)*nbody);
+  x_pos = malloc(sizeof(float)*nbody);
+  y_pos = malloc(sizeof(float)*nbody);
+  z_pos = malloc(sizeof(float)*nbody);
+  vx = malloc(sizeof(float)*nbody);
+  vy = malloc(sizeof(float)*nbody);
+  vz = malloc(sizeof(float)*nbody);
+  ax = malloc(sizeof(float)*nbody);
+  ay = malloc(sizeof(float)*nbody);
+  az = malloc(sizeof(float)*nbody);
+
   for (p = bodytab; p < bodytab+nbody; p++) {	// loop over particles
     Type(p) = BODY;				// tag as a body
     //Mass(p) = 1.0 / nbody;			// set masses equal
@@ -318,15 +337,64 @@ local void testdata(void) {
     masses[i] = mass;
     x = xrandom(0.0, MFRAC);			// pick enclosed mass
     r = 1.0 / rsqrt(rpow(x, -2.0/3.0) - 1);	// find enclosing radius
-    pickshell(Pos(p), NDIM, rsc * r);		// pick position vector
+    //pickshell(Pos(p), NDIM, rsc * r);		// pick position vector
+   
+    real rad = rsc * r;
+    real rsq, rscale;
+    int j;
+
+    do {
+      rsq = 0.0;
+      for (j = 0; j < NDIM; j++) {
+        Pos(p)[j] = xrandom(-1.0, 1.0);
+        rsq = rsq + Pos(p)[j] * Pos(p)[j];
+      }
+    } while (rsq > 1.0);
+    rscale = rad / rsqrt(rsq);
+    for (j = 0; j < NDIM; j++) {
+      Pos(p)[j] = Pos(p)[j] * rscale;
+    }
+
+    x_pos[i] = Pos(p)[0];
+    y_pos[i] = Pos(p)[1];
+    z_pos[i] = Pos(p)[2];
+
     do {					// select from fn g(x)
       x = xrandom(0.0, 1.0);			// for x in range 0:1
       y = xrandom(0.0, 0.1);			// max of g(x) is 0.092
     } while (y > x*x * rpow(1 - x*x, 3.5));	// using von Neumann tech
     v = x * rsqrt(2.0 / rsqrt(1 + r*r));	// find resulting speed
-    pickshell(Vel(p), NDIM, vsc * v);		// pick velocity vector
+
+    //pickshell(Vel(p), NDIM, vsc * v);		// pick velocity vector
+
+    rad = vsc * v;
+
+    do {
+      rsq = 0.0;
+      for (j = 0; j < NDIM; j++) {
+        Vel(p)[j] = xrandom(-1.0, 1.0);
+        rsq = rsq + Vel(p)[j] * Vel(p)[j];
+      }
+    } while (rsq > 1.0);
+    rscale = rad / rsqrt(rsq);
+    for (j = 0; j < NDIM; j++) {
+      Vel(p)[j] = Vel(p)[j] * rscale;
+    }
+
+    vx[i] = Vel(p)[0];
+    vy[i] = Vel(p)[1];
+    vz[i] = Vel(p)[2];
+
     i++;
   }
+  // printf("Positions initialised to: \n");
+  // for (int k = 0; k < nbody; k++) {
+  //   printf("%f %f %f\n", x_pos[k], y_pos[k], z_pos[k]);
+  // }
+  // printf("Velocities initialised to: \n");
+  // for (int k = 0; k < nbody; k++) {
+  //   printf("%f %f %f\n", vx[k], vy[k], vz[k]);
+  // }
   // printf("Masses initialised to: \n");
   // for (int j = 0; j < nbody; j++) {
   //   printf("%f\n", masses[j]);
@@ -342,12 +410,152 @@ local void stepsystem(void) {
 
   p1 = bodytab + MAX(nstatic, 0);		// set dynamic body range
   p2 = bodytab + nbody + MIN(nstatic, 0);
-  for (p = p1; p < p2; p++) {			// loop over body range	
-    ADDMULVS(Vel(p), Acc(p), 0.5 * dtime);	// advance v by 1/2 step
-    ADDMULVS(Pos(p), Vel(p), dtime);		// advance r by 1 step
+  p = p1;
+
+  int vector_size = (nbody/4)*4;
+
+  float scale = (0.5 * dtime);
+  __m128 scale_v = _mm_load_ps1(&scale);
+
+  __m128 dtime_v = _mm_load_ps1(&dtime);
+
+  for (int i = 0; i < vector_size; i+=4) {
+    __m128 x_pos_v = _mm_load_ps(x_pos+i); 
+    __m128 y_pos_v = _mm_load_ps(y_pos+i);
+    __m128 z_pos_v = _mm_load_ps(z_pos+i);
+
+    __m128 vx_v = _mm_load_ps(vx+i); 
+    __m128 vy_v = _mm_load_ps(vy+i);
+    __m128 vz_v = _mm_load_ps(vz+i);
+
+    __m128 ax_v = _mm_load_ps(ax+i); 
+    __m128 ay_v = _mm_load_ps(ay+i);
+    __m128 az_v = _mm_load_ps(az+i);
+
+    __m128 calculated_vel_x = _mm_mul_ps(ax_v, scale_v);
+    __m128 calculated_vel_y = _mm_mul_ps(ay_v, scale_v);
+    __m128 calculated_vel_z = _mm_mul_ps(az_v, scale_v);
+
+    __m128 x_vel_sum_v = _mm_add_ps(vx_v, calculated_vel_x);
+    __m128 y_vel_sum_v = _mm_add_ps(vy_v, calculated_vel_y);
+    __m128 z_vel_sum_v = _mm_add_ps(vz_v, calculated_vel_z);
+
+    _mm_store_ps(vx+i, x_vel_sum_v); 
+    _mm_store_ps(vy+i, y_vel_sum_v); 
+    _mm_store_ps(vz+i, z_vel_sum_v); 
+
+    Vel(p)[0] = vx[i];
+    Vel(p)[1] = vy[i];
+    Vel(p)[2] = vz[i];
+
+    Vel(p+1)[0] = vx[i+1];
+    Vel(p+1)[1] = vy[i+1];
+    Vel(p+1)[2] = vz[i+1];
+
+    Vel(p+2)[0] = vx[i+2];
+    Vel(p+2)[1] = vy[i+2];
+    Vel(p+2)[2] = vz[i+2];
+
+    Vel(p+3)[0] = vx[i+3];
+    Vel(p+3)[1] = vy[i+3];
+    Vel(p+3)[2] = vz[i+3];
+
+    // (Vel(p))[0] += (Acc(p))[0] * scale;           
+    // (Vel(p))[1] += (Acc(p))[1] * scale;               
+    // (Vel(p))[2] += (Acc(p))[2] * scale;  
+
+    __m128 calculated_x = _mm_mul_ps(vx_v, dtime_v);
+    __m128 calculated_y = _mm_mul_ps(vx_v, dtime_v);
+    __m128 calculated_z = _mm_mul_ps(vx_v, dtime_v);
+
+    __m128 x_pos_sum_v = _mm_add_ps(x_pos_v, calculated_x);
+    __m128 y_pos_sum_v = _mm_add_ps(y_pos_v, calculated_y);
+    __m128 z_pos_sum_v = _mm_add_ps(z_pos_v, calculated_z);
+
+    _mm_store_ps(x_pos+i, x_pos_sum_v); 
+    _mm_store_ps(y_pos+i, y_pos_sum_v); 
+    _mm_store_ps(z_pos+i, z_pos_sum_v); 
+
+    Pos(p)[0] = x_pos[i];
+    Pos(p)[1] = y_pos[i];
+    Pos(p)[2] = z_pos[i];
+
+    Pos(p+1)[0] = x_pos[i+1];
+    Pos(p+1)[1] = y_pos[i+1];
+    Pos(p+1)[2] = z_pos[i+1];
+
+    Pos(p+2)[0] = x_pos[i+2];
+    Pos(p+2)[1] = y_pos[i+2];
+    Pos(p+2)[2] = z_pos[i+2];
+
+    Pos(p+3)[0] = x_pos[i+3];
+    Pos(p+3)[1] = y_pos[i+3];
+    Pos(p+3)[2] = z_pos[i+3];
+
+    // (Pos(p))[0] += (Vel(p))[0] * (dtime);           
+    // (Pos(p))[1] += (Vel(p))[1] * (dtime);               
+    // (Pos(p))[2] += (Vel(p))[2] * (dtime);        
+
+    p += 4;
+
+    //ADDMULVS(Vel(p), Acc(p), 0.5 * dtime);	// advance v by 1/2 step
+    //ADDMULVS(Pos(p), Vel(p), dtime);		// advance r by 1 step
   }
+  for (; p < p2; p++) {
+    (Vel(p))[0] += (Acc(p))[0] * (0.5 * dtime);           
+    (Vel(p))[1] += (Acc(p))[1] * (0.5 * dtime);               
+    (Vel(p))[2] += (Acc(p))[2] * (0.5 * dtime);    
+
+    (Pos(p))[0] += (Vel(p))[0] * (dtime);           
+    (Pos(p))[1] += (Vel(p))[1] * (dtime);               
+    (Pos(p))[2] += (Vel(p))[2] * (dtime);      
+  }
+
   treeforce();
-  for (p = p1; p < p2; p++) {			// loop over body range	
+
+  p = p1;
+
+  for (int i = 0; i < vector_size; i+=4) {
+    //ADDMULVS(Vel(p), Acc(p), 0.5 * dtime);
+    __m128 vx_v = _mm_load_ps(vx+i); 
+    __m128 vy_v = _mm_load_ps(vy+i);
+    __m128 vz_v = _mm_load_ps(vz+i);
+
+    __m128 ax_v = _mm_load_ps(ax+i); 
+    __m128 ay_v = _mm_load_ps(ay+i);
+    __m128 az_v = _mm_load_ps(az+i);
+
+    __m128 calculated_v_x = _mm_mul_ps(ax_v, scale_v);
+    __m128 calculated_v_y = _mm_mul_ps(ay_v, scale_v);
+    __m128 calculated_v_z = _mm_mul_ps(az_v, scale_v);
+
+    __m128 x_v_sum_v = _mm_add_ps(vx_v, calculated_v_x);
+    __m128 y_v_sum_v = _mm_add_ps(vy_v, calculated_v_y);
+    __m128 z_v_sum_v = _mm_add_ps(vz_v, calculated_v_z);
+
+    _mm_store_ps(vx+i, x_v_sum_v); 
+    _mm_store_ps(vy+i, y_v_sum_v); 
+    _mm_store_ps(vz+i, z_v_sum_v);
+
+    Vel(p)[0] = vx[i];
+    Vel(p)[1] = vy[i];
+    Vel(p)[2] = vz[i];
+
+    Vel(p+1)[0] = vx[i+1];
+    Vel(p+1)[1] = vy[i+1];
+    Vel(p+1)[2] = vz[i+1];
+
+    Vel(p+2)[0] = vx[i+2];
+    Vel(p+2)[1] = vy[i+2];
+    Vel(p+2)[2] = vz[i+2];
+
+    Vel(p+3)[0] = vx[i+3];
+    Vel(p+3)[1] = vy[i+3];
+    Vel(p+3)[2] = vz[i+3];
+
+    p += 4;
+  }  
+  for (; p < p2; p++) {			// loop over body range	
     ADDMULVS(Vel(p), Acc(p), 0.5 * dtime);	// advance v by 1/2 step
   }
   nstep++;					// count another time step
@@ -364,12 +572,20 @@ local void treeforce(void) {
   p2 = bodytab + nbody + MIN(nstatic, 0);
   for (p = bodytab; p < bodytab+nbody; p++)	{// loop over all bodies
     Update(p) = (testcalc ? p1 <= p && p < p2 : TRUE);
-  //printf("Pos(p) = (%.8f,%.8f,%.8f)\n",  Pos(p)[0], Pos(p)[1], Pos(p)[2]);
-}
+  }
 						// flag bodies to update
   maketree(bodytab, nbody);			// construct tree structure
   gravcalc();					// compute current forces
+  // Add accelerations to array.
+  int i = 0;
+  for (p = bodytab; p < bodytab+nbody; p++) {// loop over all bodies
+    ax[i] = Acc(p)[0];
+    ay[i] = Acc(p)[1];
+    az[i] = Acc(p)[2];
+    i++;
+  }
   forcereport();				// print force statistics
+
 #if defined(EXTGRAV)
   for (p = bodytab; p < bodytab+nbody; p++)	// loop over all bodies
     if (Update(p) && gravgsp != NULL) {		// update in extern field?

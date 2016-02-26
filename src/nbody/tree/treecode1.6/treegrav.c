@@ -203,7 +203,7 @@ local void walksub(nodeptr *nptr, nodeptr *np, cellptr cptr, cellptr bptr,
 local void gravsum(bodyptr p0, cellptr cptr, cellptr bptr) {
   vector pos0, acc0;
   real phi0;
- 
+
   SETV(pos0, Pos(p0));                          // copy position of body
   phi0 = 0.0;                                   // init total potential
   CLRV(acc0);                                   // and total acceleration
