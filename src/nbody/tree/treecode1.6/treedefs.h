@@ -111,6 +111,10 @@ global bool usequad;		// use quadrupole corrections
 
 global real eps;                // density smoothing parameter
 
+global float *masses;
+
+global int nbody;
+
 //  Tree construction: interface and global results.
 //  ________________________________________________
  

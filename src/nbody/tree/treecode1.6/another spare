@@ -1,0 +1,101 @@
+
+      // // ---- TWO ---- //
+      // if (Type(*(ap+1)) == CELL) {      // is this node a cell?
+      //  if (accept(*(ap+1), psize, pmid)) {   // does it pass the test?
+      //    if (Mass(*(ap+1)) > 0.0) {    // and contribute to field?
+      //      Mass(cptr) = Mass(*(ap+1));   // copy to interaction list
+      //      SETV(Pos(cptr), Pos(*(ap+1))); 
+      // #if defined(SOFTCORR)
+      //      TRACEM(Trace(cptr), Quad(*(ap+1))); // save trace in copy
+      //     SETMI(trQM);
+      //      MULMS(trQM, trQM, Trace(cptr)/3);
+      //      SUBM(Quad(cptr), Quad(*(ap+1)), trQM);  // store traceless moment
+      // #else
+      //      SETM(Quad(cptr), Quad(*(ap+1)));  // copy traceless moment
+      // #endif
+      //      cptr++;       // and bump cell array ptr
+      //    }
+      //  } else {        // this cell fails the test
+      //    if (np - active >= actsafe) {   // make sure list has room
+      //      fatal("%s.walktree: active list overflow\n", getprog());
+      //     }  
+      //    for (q = More(*(ap+1)); q != Next(*(ap+1)); q = Next(q)) {
+      //            // loop over all subcells
+      //      *np++= q;       // put them on active list
+      //     }
+      //  }
+      // } else {         // else this node is a body
+      //  if (*(ap+1) != p && Mass(*(ap+1)) > 0.0) {  // not self-interaction?
+      //    --bptr;       // bump body array ptr
+      //    Mass(bptr) = Mass(*(ap+1));   // and copy data to array
+      //    SETV(Pos(bptr), Pos(*(ap+1)));
+      //  }
+      // }
+
+
+      // // ---- THREE ---- //
+      // if (Type(*(ap+2)) == CELL) {      // is this node a cell?
+      //  if (accept(*(ap+2), psize, pmid)) {   // does it pass the test?
+      //    if (Mass(*(ap+2)) > 0.0) {    // and contribute to field?
+      //      Mass(cptr) = Mass(*(ap+2));   // copy to interaction list
+      //      SETV(Pos(cptr), Pos(*(ap+2))); 
+      // #if defined(SOFTCORR)
+      //      TRACEM(Trace(cptr), Quad(*(ap+2))); // save trace in copy
+      //     SETMI(trQM);
+      //      MULMS(trQM, trQM, Trace(cptr)/3);
+      //      SUBM(Quad(cptr), Quad(*(ap+2)), trQM);  // store traceless moment
+      // #else
+      //      SETM(Quad(cptr), Quad(*(ap+2)));  // copy traceless moment
+      // #endif
+      //      cptr++;       // and bump cell array ptr
+      //    }
+      //  } else {        // this cell fails the test
+      //    if (np - active >= actsafe) {   // make sure list has room
+      //      fatal("%s.walktree: active list overflow\n", getprog());
+      //     }  
+      //    for (q = More(*(ap+2)); q != Next(*(ap+2)); q = Next(q)) {
+      //            // loop over all subcells
+      //      *np++= q;       // put them on active list
+      //     }
+      //  }
+      // } else {         // else this node is a body
+      //  if (*(ap+2) != p && Mass(*(ap+2)) > 0.0) {  // not self-interaction?
+      //    --bptr;       // bump body array ptr
+      //    Mass(bptr) = Mass(*(ap+2));   // and copy data to array
+      //    SETV(Pos(bptr), Pos(*(ap+2)));
+      //  }
+      // }
+
+
+      // // ---- FOUR ---- //
+      // if (Type(*(ap+3)) == CELL) {      // is this node a cell?
+      //  if (accept(*(ap+3), psize, pmid)) {   // does it pass the test?
+      //    if (Mass(*(ap+3)) > 0.0) {    // and contribute to field?
+      //      Mass(cptr) = Mass(*(ap+3));   // copy to interaction list
+      //      SETV(Pos(cptr), Pos(*(ap+3))); 
+      // #if defined(SOFTCORR)
+      //      TRACEM(Trace(cptr), Quad(*(ap+3))); // save trace in copy
+      //     SETMI(trQM);
+      //      MULMS(trQM, trQM, Trace(cptr)/3);
+      //      SUBM(Quad(cptr), Quad(*(ap+3)), trQM);  // store traceless moment
+      // #else
+      //      SETM(Quad(cptr), Quad(*ap));  // copy traceless moment
+      // #endif
+      //      cptr++;       // and bump cell array ptr
+      //    }
+      //  } else {        // this cell fails the test
+      //    if (np - active >= actsafe) {   // make sure list has room
+      //      fatal("%s.walktree: active list overflow\n", getprog());
+      //     }  
+      //    for (q = More(*(ap+3)); q != Next(*(ap+3)); q = Next(q)) {
+      //            // loop over all subcells
+      //      *np++= q;       // put them on active list
+      //     }
+      //  }
+      // } else {         // else this node is a body
+      //  if (*(ap+3) != p && Mass(*(ap+3)) > 0.0) {  // not self-interaction?
+      //    --bptr;       // bump body array ptr
+      //    Mass(bptr) = Mass(*(ap+3));   // and copy data to array
+      //    SETV(Pos(bptr), Pos(*(ap+3)));
+      //  }
+      // }

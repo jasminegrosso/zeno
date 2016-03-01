@@ -107,13 +107,15 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
       j++;
     }
 
-    float s[3];
+    float s;
     float trace[3];
 
     ap = aptr;
 
     for (int i = 0; i < vector_size; i+=4) {
+      printf("FIRST FORLOOP\n");
       if (ap + 3 >= nptr) {
+        printf("FIRST FORLOOP BREAK\n");
         break;
       }
 
@@ -147,20 +149,16 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
            __m128 one_v = _mm_load_ps1(&one);
            __m128 zero_v = _mm_load_ps1(&zero);
 
-           s[0] = Trace(cptr)/3;
-           s[1] = Trace(cptr+1)/3;
-           s[2] = Trace(cptr+2)/3;
-           s[3] = Trace(cptr+2)/3;
+           trace[0] = Trace(cptr)/3;
+           trace[1] = Trace(cptr+1)/3;
+           trace[2] = Trace(cptr+2)/3;
+           trace[3] = Trace(cptr+2)/3;
 
            //s = Trace(cptr)/3;
-           __m128 s_v = _mm_load_ps(s);
+           __m128 trace_v = _mm_load_ps(trace);
 
-           __m128 mul_result_a = _mm_mul_ps(one_v, s_v);
-           //TODO: unnecessary calculation.
-           __m128 mul_result_b = _mm_mul_ps(zero_v, s_v);
-
-           // Take trQM from Quad(*ap). Need to load Quad(*ap)
-           // into a vector. 
+           __m128 mul_result_a = _mm_mul_ps(one_v, trace_v);
+           __m128 mul_result_b = _mm_mul_ps(zero_v, trace_v);
 
            __m128 quad_a_v = _mm_load_ps(quad_a+i);
            __m128 quad_b_v = _mm_load_ps(quad_b+i);
@@ -186,8 +184,6 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
            __m128 h_result = _mm_sub_ps(quad_h_v, mul_result_b);
            __m128 i_result = _mm_sub_ps(quad_i_v, mul_result_a);
 
-           // Now set Quad(cptr) to this result. 
-
            _mm_store_ps(quad_a+i, quad_a_v);
            _mm_store_ps(quad_b+i, quad_b_v);
            _mm_store_ps(quad_c+i, quad_c_v);
@@ -200,53 +196,40 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
            _mm_store_ps(quad_h+i, quad_h_v);
            _mm_store_ps(quad_i+i, quad_i_v);
 
-           for (int j = 0; j < 4; j++) {
-             Quad(cptr+j)[0][0] = quad_a[i+j];
-             Quad(cptr+j)[0][1] = quad_b[i+j];
-             Quad(cptr+j)[0][2] = quad_c[i+j];
+           j = 0;
 
-             Quad(cptr+j)[1][0] = quad_d[i+j];
-             Quad(cptr+j)[1][1] = quad_e[i+j];
-             Quad(cptr+j)[1][2] = quad_f[i+j];
+           for (ap = aptr; (ap < nptr) && (j < 4); ap++) {  
+             Quad(*ap)[0][0] = quad_a[j];
+             Quad(*ap)[0][1] = quad_b[j];
+             Quad(*ap)[0][2] = quad_c[j];
 
-             Quad(cptr+j)[2][0] = quad_g[i+j];
-             Quad(cptr+j)[2][1] = quad_h[i+j];
-             Quad(cptr+j)[2][2] = quad_i[i+j];
+             Quad(*ap)[1][0] = quad_d[j];
+             Quad(*ap)[1][1] = quad_e[j];
+             Quad(*ap)[1][2] = quad_f[j];
+
+             Quad(*ap)[2][0] = quad_g[j];
+             Quad(*ap)[2][1] = quad_h[j];
+             Quad(*ap)[2][2] = quad_i[j];
+             j++;
            }
-
-           // j = 0;
-
-           // for (ap = aptr; (ap < nptr) && (j < 4); ap++) {  
-           //   Quad(*ap)[0][0] = quad_a[j];
-           //   Quad(*ap)[0][1] = quad_b[j];
-           //   Quad(*ap)[0][2] = quad_c[j];
-
-           //   Quad(*ap)[1][0] = quad_d[j];
-           //   Quad(*ap)[1][1] = quad_e[j];
-           //   Quad(*ap)[1][2] = quad_f[j];
-
-           //   Quad(*ap)[2][0] = quad_g[j];
-           //   Quad(*ap)[2][1] = quad_h[j];
-           //   Quad(*ap)[2][2] = quad_i[j];
-           //   j++;
-           // }
 
            //MULMS(trQM, trQM, Trace(cptr)/3);
            //SUBM(Quad(cptr), Quad(*ap), trQM);  // store traceless moment
       #else
-           SETM(Quad(cptr), Quad(*ap));  // copy traceless moment
-           // for (int m = 0; m < NDIM; m++) {
-           //  for (int n = 0; n < NDIM; n++) {
-           //    Quad(cptr)[m][n] = Quad(*ap)[m][n];
-           //    Quad(cptr+1)[m][n] = Quad(*(ap+1))[m][n];
-           //    Quad(cptr+2)[m][n] = Quad(*(ap+2))[m][n];
-           //    Quad(cptr+3)[m][n] = Quad(*(ap+2))[m][n];
-           //  }
-           // }
+           //SETM(Quad(cptr), Quad(*ap));  // copy traceless moment
+           for (int m = 0; m < NDIM; m++) {
+            for (int n = 0; n < NDIM; n++) {
+              Quad(cptr)[m][n] = Quad(*ap)[m][n];
+              Quad(cptr+1)[m][n] = Quad(*(ap+1))[m][n];
+              Quad(cptr+2)[m][n] = Quad(*(ap+2))[m][n];
+              Quad(cptr+3)[m][n] = Quad(*(ap+2))[m][n];
+            }
+           }
       #endif
            cptr+=4;       // and bump cell array ptr
          }
        } else {        // this cell fails the test
+        printf("FIRST BREAK\n");
         break;
          // if (np - active >= actsafe) {   // make sure list has room
          //   fatal("%s.walktree: active list overflow\n", getprog());
@@ -257,6 +240,7 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
          //  }
        }
       } else {         // else this node is a body
+        printf("SECOND BREAK\n");
         break;
        // if (*ap != p && Mass(*ap) > 0.0) {  // not self-interaction?
        //   --bptr;       // bump body array ptr
@@ -266,9 +250,15 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
       }
 
       ap += 4;
+      printf("INCREASE AP\n");
     }
 
+    printf("MID FOR LOOP\n");
+    printf("%d\n", ap);
+    printf("%d\n", ap < nptr);
+
     for (; ap < nptr; ap++) {    // loop over active nodes
+      printf("SECONDFORLOOP\n");
       if (Type(*ap) == CELL) {      // is this node a cell?
        if (accept(*ap, psize, pmid)) {   // does it pass the test?
          if (Mass(*ap) > 0.0) {    // and contribute to field?
@@ -302,6 +292,7 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
       }
     }
 
+    printf("AFTER SECONDFORLOOP\n");
 
     acttot = MAX(acttot, np - active);    // keep track of max active
     if (np != nptr) {       // if new actives were added

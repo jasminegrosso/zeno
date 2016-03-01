@@ -11,6 +11,8 @@
 #include <sys/times.h>
 #include <sys/resource.h>
 
+ #include <immintrin.h>
+
 //  Default values for input parameters.
 //  ____________________________________
 
@@ -118,6 +120,24 @@ int main(int argc, string argv[]) {
     treeforce_1 = wtime();
   }
   finaloutput();
+  bodyptr p;
+  bodyptr q;
+  float phi = 0.0f;
+  for (p = bodytab; p < bodytab+nbody; p++) {// loop over all bodies
+    for (q = bodytab; q < bodytab+nbody; q++) {// loop over all bodies
+    //  printf("Pos(p) = (%.8f,%.8f,%.8f)\n",  Pos(p)[0], Pos(p)[1], Pos(p)[2]);
+    //  printf("Pos(q) = (%.8f,%.8f,%.8f)\n",  Pos(q)[0], Pos(q)[1], Pos(q)[2]);
+      float rx = Pos(q)[0] - Pos(p)[0];
+      float ry = Pos(q)[1] - Pos(p)[1];
+      float rz = Pos(q)[2] - Pos(p)[2];
+      float r2 = rx*rx + ry*ry + rz*rz + eps;
+      float r2inv = 1.0 / sqrt(r2);
+      float r6inv = r2inv * r2inv * r2inv;
+      float mass = Mass(q);
+      phi += mass * r6inv;
+    }
+  }
+  printf(" Answer = %f\n", phi);
   return (0);					// end with proper status
 }
 
@@ -250,11 +270,16 @@ local void testdata(void) {
 						// alloc space for bodies
   rsc = (3 * PI) / 16;				// set length scale factor
   vsc = rsqrt(1.0 / rsc);			// find speed scale factor
+  int i = 0;
+  masses = malloc(sizeof(int)*nbody);
   for (p = bodytab; p < bodytab+nbody; p++) {	// loop over particles
     Type(p) = BODY;				// tag as a body
     //Mass(p) = 1.0 / nbody;			// set masses equal
     // Set mass randomly, like in brute
-    Mass(p) = (rand() / (float) RAND_MAX) * mscale;
+    float mass = (rand() / (float) RAND_MAX) * mscale;
+    //float mass = 0;
+    Mass(p) = mass;
+    masses[i] = mass;
     x = xrandom(0.0, MFRAC);			// pick enclosed mass
     r = 1.0 / rsqrt(rpow(x, -2.0/3.0) - 1);	// find enclosing radius
     pickshell(Pos(p), NDIM, rsc * r);		// pick position vector
@@ -264,6 +289,7 @@ local void testdata(void) {
     } while (y > x*x * rpow(1 - x*x, 3.5));	// using von Neumann tech
     v = x * rsqrt(2.0 / rsqrt(1 + r*r));	// find resulting speed
     pickshell(Vel(p), NDIM, vsc * v);		// pick velocity vector
+    i++;
   }
   tnow = 0.0;					// set elapsed model time
 }
