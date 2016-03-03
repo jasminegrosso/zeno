@@ -34,6 +34,10 @@ local int acttot;                               // actual active length
 local nodeptr *active = NULL;                   // list of nodes tested
 local cellptr interact = NULL;                  // list of interactions
 
+global float *x_pos;
+global float *y_pos;
+global float *z_pos;
+
 //  gravcalc: perform force calculation on all particles.
 //  _____________________________________________________
  
@@ -77,198 +81,7 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
     np = nptr;          // start new active list
     actsafe = actmax - NSUB;      // leave room for NSUB more
 
-    int vector_size = (nbody/4)*4;
-
-    float quad_a[nbody];
-    float quad_b[nbody];
-    float quad_c[nbody];
-
-    float quad_d[nbody];
-    float quad_e[nbody];
-    float quad_f[nbody];
-
-    float quad_g[nbody];
-    float quad_h[nbody];
-    float quad_i[nbody];
-    int j = 0;
-
-    for (ap = aptr; ap < nptr; ap++) {  
-      quad_a[j] = Quad(*ap)[0][0];
-      quad_b[j] = Quad(*ap)[0][1];
-      quad_c[j] = Quad(*ap)[0][2];
-
-      quad_d[j] = Quad(*ap)[1][0];
-      quad_e[j] = Quad(*ap)[1][1];
-      quad_f[j] = Quad(*ap)[1][2];
-
-      quad_g[j] = Quad(*ap)[2][0];
-      quad_h[j] = Quad(*ap)[2][1];
-      quad_i[j] = Quad(*ap)[2][2];
-      j++;
-    }
-
-    float s[3];
-    float trace[3];
-
-    ap = aptr;
-
-    for (int i = 0; i < vector_size; i+=4) {
-      if (ap + 3 >= nptr) {
-        break;
-      }
-
-      // ---- ONE ---- //
-      if ((Type(*ap) == CELL) && (Type(*(ap+1)) == CELL) && (Type(*(ap+2)) == CELL) && (Type(*(ap+3)) == CELL)) {      // is this node a cell?
-       if (accept(*ap, psize, pmid) && accept(*(ap+1), psize, pmid) && accept(*(ap+2), psize, pmid) && accept(*(ap+3), psize, pmid)) {   // does it pass the test?
-         if ((Mass(*ap) > 0.0) && (Mass(*(ap+1)) > 0.0) && (Mass(*(ap+2)) > 0.0) && (Mass(*(ap+3)) > 0.0)) {    // and contribute to field?
-           Mass(cptr) = Mass(*ap);   // copy to interaction list
-           SETV(Pos(cptr), Pos(*ap)); 
-
-           Mass(cptr+1) = Mass(*(ap+1));   // copy to interaction list
-           SETV(Pos(cptr+1), Pos(*(ap+1))); 
-
-           Mass(cptr+2) = Mass(*(ap+2));   // copy to interaction list
-           SETV(Pos(cptr+2), Pos(*(ap+2))); 
-
-           Mass(cptr+3) = Mass(*(ap+3));   // copy to interaction list
-           SETV(Pos(cptr+3), Pos(*(ap+3))); 
-
-      #if defined(SOFTCORR)
-           //TRACEM(Trace(cptr), Quad(*ap)); // save trace in copy
-
-           trace[0] = Trace(cptr) + Quad(*ap)[0][0] + Quad(*ap)[1][1] + Quad(*ap)[2][2];
-           trace[1] = Trace(cptr+1) + Quad(*(ap+1))[0][0] + Quad(*(ap+1))[1][1] + Quad(*(ap+1))[2][2];
-           trace[2] = Trace(cptr+2) + Quad(*(ap+2))[0][0] + Quad(*(ap+2))[1][1] + Quad(*(ap+2))[2][2];
-           trace[3] = Trace(cptr+3) + Quad(*(ap+3))[0][0] + Quad(*(ap+3))[1][1] + Quad(*(ap+3))[2][2];
-
-           //SETMI(trQM);
-           float one = 1;
-           float zero = 0;
-           __m128 one_v = _mm_load_ps1(&one);
-           __m128 zero_v = _mm_load_ps1(&zero);
-
-           s[0] = Trace(cptr)/3;
-           s[1] = Trace(cptr+1)/3;
-           s[2] = Trace(cptr+2)/3;
-           s[3] = Trace(cptr+2)/3;
-
-           //s = Trace(cptr)/3;
-           __m128 s_v = _mm_load_ps(s);
-
-           __m128 mul_result_a = _mm_mul_ps(one_v, s_v);
-           //TODO: unnecessary calculation.
-           __m128 mul_result_b = _mm_mul_ps(zero_v, s_v);
-
-           // Take trQM from Quad(*ap). Need to load Quad(*ap)
-           // into a vector. 
-
-           __m128 quad_a_v = _mm_load_ps(quad_a+i);
-           __m128 quad_b_v = _mm_load_ps(quad_b+i);
-           __m128 quad_c_v = _mm_load_ps(quad_c+i);
-
-           __m128 quad_d_v = _mm_load_ps(quad_d+i);
-           __m128 quad_e_v = _mm_load_ps(quad_e+i);
-           __m128 quad_f_v = _mm_load_ps(quad_f+i);
-
-           __m128 quad_g_v = _mm_load_ps(quad_g+i);
-           __m128 quad_h_v = _mm_load_ps(quad_h+i);
-           __m128 quad_i_v = _mm_load_ps(quad_i+i);
-
-           __m128 a_result = _mm_sub_ps(quad_a_v, mul_result_a);
-           __m128 b_result = _mm_sub_ps(quad_b_v, mul_result_b);
-           __m128 c_result = _mm_sub_ps(quad_c_v, mul_result_b);
-
-           __m128 d_result = _mm_sub_ps(quad_d_v, mul_result_b);
-           __m128 e_result = _mm_sub_ps(quad_e_v, mul_result_a);
-           __m128 f_result = _mm_sub_ps(quad_f_v, mul_result_b);
-
-           __m128 g_result = _mm_sub_ps(quad_g_v, mul_result_b);
-           __m128 h_result = _mm_sub_ps(quad_h_v, mul_result_b);
-           __m128 i_result = _mm_sub_ps(quad_i_v, mul_result_a);
-
-           // Now set Quad(cptr) to this result. 
-
-           _mm_store_ps(quad_a+i, quad_a_v);
-           _mm_store_ps(quad_b+i, quad_b_v);
-           _mm_store_ps(quad_c+i, quad_c_v);
-
-           _mm_store_ps(quad_d+i, quad_d_v);
-           _mm_store_ps(quad_e+i, quad_e_v);
-           _mm_store_ps(quad_f+i, quad_f_v);
-
-           _mm_store_ps(quad_g+i, quad_g_v);
-           _mm_store_ps(quad_h+i, quad_h_v);
-           _mm_store_ps(quad_i+i, quad_i_v);
-
-           for (int j = 0; j < 4; j++) {
-             Quad(cptr+j)[0][0] = quad_a[i+j];
-             Quad(cptr+j)[0][1] = quad_b[i+j];
-             Quad(cptr+j)[0][2] = quad_c[i+j];
-
-             Quad(cptr+j)[1][0] = quad_d[i+j];
-             Quad(cptr+j)[1][1] = quad_e[i+j];
-             Quad(cptr+j)[1][2] = quad_f[i+j];
-
-             Quad(cptr+j)[2][0] = quad_g[i+j];
-             Quad(cptr+j)[2][1] = quad_h[i+j];
-             Quad(cptr+j)[2][2] = quad_i[i+j];
-           }
-
-           // j = 0;
-
-           // for (ap = aptr; (ap < nptr) && (j < 4); ap++) {  
-           //   Quad(*ap)[0][0] = quad_a[j];
-           //   Quad(*ap)[0][1] = quad_b[j];
-           //   Quad(*ap)[0][2] = quad_c[j];
-
-           //   Quad(*ap)[1][0] = quad_d[j];
-           //   Quad(*ap)[1][1] = quad_e[j];
-           //   Quad(*ap)[1][2] = quad_f[j];
-
-           //   Quad(*ap)[2][0] = quad_g[j];
-           //   Quad(*ap)[2][1] = quad_h[j];
-           //   Quad(*ap)[2][2] = quad_i[j];
-           //   j++;
-           // }
-
-           //MULMS(trQM, trQM, Trace(cptr)/3);
-           //SUBM(Quad(cptr), Quad(*ap), trQM);  // store traceless moment
-      #else
-           SETM(Quad(cptr), Quad(*ap));  // copy traceless moment
-           // for (int m = 0; m < NDIM; m++) {
-           //  for (int n = 0; n < NDIM; n++) {
-           //    Quad(cptr)[m][n] = Quad(*ap)[m][n];
-           //    Quad(cptr+1)[m][n] = Quad(*(ap+1))[m][n];
-           //    Quad(cptr+2)[m][n] = Quad(*(ap+2))[m][n];
-           //    Quad(cptr+3)[m][n] = Quad(*(ap+2))[m][n];
-           //  }
-           // }
-      #endif
-           cptr+=4;       // and bump cell array ptr
-         }
-       } else {        // this cell fails the test
-        break;
-         // if (np - active >= actsafe) {   // make sure list has room
-         //   fatal("%s.walktree: active list overflow\n", getprog());
-         //  }  
-         // for (q = More(*ap); q != Next(*ap); q = Next(q)) {
-         //         // loop over all subcells
-         //   *np++= q;       // put them on active list
-         //  }
-       }
-      } else {         // else this node is a body
-        break;
-       // if (*ap != p && Mass(*ap) > 0.0) {  // not self-interaction?
-       //   --bptr;       // bump body array ptr
-       //   Mass(bptr) = Mass(*ap);   // and copy data to array
-       //   SETV(Pos(bptr), Pos(*ap));
-       // }
-      }
-
-      ap += 4;
-    }
-
-    for (; ap < nptr; ap++) {    // loop over active nodes
+    for (ap = aptr; ap < nptr; ap++) {    // loop over active nodes
       if (Type(*ap) == CELL) {      // is this node a cell?
        if (accept(*ap, psize, pmid)) {   // does it pass the test?
          if (Mass(*ap) > 0.0) {    // and contribute to field?
@@ -440,17 +253,114 @@ local void sumnode(cellptr start, cellptr finish,
                    vector pos0, real *phi0, vector acc0) {
   real eps2, dr2, dr2i, dr1i, mdr1i, mdr3i;
   vector dr;
- 
+
   eps2 = eps * eps;       // premultiply softening
-  for (cellptr p = start; p < finish; p++) {  // loop over node list
-    DOTPSUBV(dr2, dr, Pos(p), pos0);    // compute sep. vector
-            // and square of distance
+  //for (cellptr p = start; p < finish; p++) {  // loop over node list
+  cellptr p;
+  int vector_size = (nbody/4)*4;
+
+  float *x_p;
+  float *y_p;
+  float *z_p;
+  float * masses_again;
+  x_p = malloc(sizeof(float)*nbody);
+  y_p = malloc(sizeof(float)*nbody);
+  z_p = malloc(sizeof(float)*nbody);
+  masses_again = malloc(sizeof(float)*nbody);
+
+  __m128 eps2_v = _mm_load_ps1(&eps2);
+  float one = (real) 1.0;
+  __m128 one_v = _mm_load_ps1(&one);
+
+  float pos0_x = pos0[0];
+  float pos0_y = pos0[1];
+  float pos0_z = pos0[2];
+
+  __m128 pos0_x_v = _mm_load_ps1(&pos0_x);
+  __m128 pos0_y_v = _mm_load_ps1(&pos0_y);
+  __m128 pos0_z_v = _mm_load_ps1(&pos0_z);
+
+  __m128 phi0_v = _mm_load_ps1(phi0);
+
+  float acc_x[3];
+  float acc_y[3];
+  float acc_z[3];
+
+  int j = 0;
+  int i = 0;
+
+  for (p = start; p < finish; p++) {
+    x_p[j] = Pos(p)[0];
+    y_p[j] = Pos(p)[1];
+    z_p[j] = Pos(p)[2];
+    masses_again[j] = Mass(p);
+    j++;
+  }
+
+  for (p = start; p < finish - 4; p+=4) {
+  //for (int i = 0; i < vector_size; i+=4) {
+    __m128 x_pos_v = _mm_load_ps(x_p+i);
+    __m128 y_pos_v = _mm_load_ps(y_p+i);
+    __m128 z_pos_v = _mm_load_ps(z_p+i);
+
+    __m128 dr_x_v = _mm_sub_ps(x_pos_v, pos0_x_v);
+    __m128 dr2_v = _mm_mul_ps(dr_x_v, dr_x_v);
+
+    __m128 dr_y_v = _mm_sub_ps(y_pos_v, pos0_y_v);
+    dr2_v = _mm_add_ps(_mm_mul_ps(dr_y_v, dr_y_v), dr2_v);
+
+    __m128 dr_z_v = _mm_sub_ps(z_pos_v, pos0_z_v);
+    dr2_v = _mm_add_ps(_mm_mul_ps(dr_z_v, dr_z_v), dr2_v);
+
+    __m128 dr2i_v = _mm_div_ps(one_v, _mm_add_ps(dr2_v, eps2_v));
+    __m128 dr1i_v = _mm_rsqrt_ps(dr2i_v);
+
+    __m128 mass_v = _mm_load_ps(masses+i);
+
+    __m128 mdr1i_v = _mm_mul_ps(mass_v, dr1i_v);
+
+    __m128 mdr3i_v = _mm_mul_ps(mdr1i_v, dr2i_v);
+
+    phi0_v = _mm_sub_ps(phi0_v, mdr1i_v);
+
+    __m128 calculated_acc_x = _mm_mul_ps(dr_x_v, mdr3i_v);
+    __m128 calculated_acc_y = _mm_mul_ps(dr_y_v, mdr3i_v);
+    __m128 calculated_acc_z = _mm_mul_ps(dr_z_v, mdr3i_v);
+
+    __m128 acc_x_v = _mm_load_ps1(&acc0[0]);
+    __m128 acc_y_v = _mm_load_ps1(&acc0[1]);
+    __m128 acc_z_v = _mm_load_ps1(&acc0[2]);
+
+    acc_x_v = _mm_add_ps(acc_x_v, calculated_acc_x);
+    acc_y_v = _mm_add_ps(acc_y_v, calculated_acc_y);
+    acc_z_v = _mm_add_ps(acc_z_v, calculated_acc_z);
+
+    _mm_store_ps(acc_x, acc_x_v);
+    _mm_store_ps(acc_y, acc_y_v);
+    _mm_store_ps(acc_z, acc_z_v);
+
+    acc0[0] = acc_x[0];
+    acc0[1] = acc_y[0];
+    acc0[2] = acc_z[0];
+
+    i+=4;
+  }
+
+  for (; p < finish; p++) {
+    DOTPSUBV(dr2, dr, Pos(p), pos0);
+
     dr2i = ((real) 1.0) / (dr2 + eps2);   // perform only division
     dr1i = rsqrt(dr2i);       // set inverse soft distance
     mdr1i = Mass(p) * dr1i;     // form partial potential
     mdr3i = mdr1i * dr2i;     // form scale factor for dr
     *phi0 -= mdr1i;       // sum potential
-    ADDMULVS(acc0, dr, mdr3i);      // sum acceleration
+
+    //ADDMULVS(acc0, dr, mdr3i);      // sum acceleration
+
+    (acc0)[0] += (dr)[0] * (mdr3i);           
+    (acc0)[1] += (dr)[1] * (mdr3i);           
+    (acc0)[2] += (dr)[2] * (mdr3i);
+
   }
 }
 

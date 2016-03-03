@@ -1,6 +1,6 @@
 #!/bin/bash
-stars=1000
-timesteps=1000
+stars=100
+timesteps=100
 function run_treecode {
   run=$(./treecode nbody=$stars timesteps=$timesteps )
   var=0
@@ -32,6 +32,20 @@ function run_treecode {
     if [ $var -eq 34 ]
       then
         echo Total $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # GB
+    if [ $var -eq 40 ]
+      then
+        echo GB $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # Answer
+    if [ $var -eq 43 ]
+      then
+        echo Answer $x
         printf $x >> test.csv
         printf , >> test.csv
     fi

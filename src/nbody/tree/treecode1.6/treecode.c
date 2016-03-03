@@ -11,7 +11,7 @@
 #include <sys/times.h>
 #include <sys/resource.h>
 
- #include <immintrin.h>
+#include <immintrin.h>
 
 //  Default values for input parameters.
 //  ____________________________________
