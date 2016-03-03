@@ -35,6 +35,20 @@ function run_treecode {
         printf $x >> test.csv
         printf , >> test.csv
     fi
+    # GB
+    if [ $var -eq 40 ]
+      then
+        echo GB $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # Answer
+    if [ $var -eq 43 ]
+      then
+        echo Answer $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
   done
 }
 # Comment out if just want to add stuff to the end.

@@ -1,6 +1,6 @@
 #!/bin/bash
-stars=1000
-timesteps=1000
+stars=10
+timesteps=10
 function run_cs257 {
   run=$(./cs257 $stars $timesteps 0)
   var=0
