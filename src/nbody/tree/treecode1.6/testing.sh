@@ -8,30 +8,44 @@ function run_treecode {
     # echo $x
     var=$((var+1))
     # startrun
-    if [ $var -eq 24 ]
+    if [ $var -eq 25 ]
       then
         echo startrun $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
     # Initial Treeforce
-    if [ $var -eq 27 ]
+    if [ $var -eq 28 ]
       then
         echo Initial Treeforce $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
     # Treeforce Loop
-    if [ $var -eq 32 ]
+    if [ $var -eq 33 ]
       then
         echo Treeforce loop $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
     # Total
-    if [ $var -eq 34 ]
+    if [ $var -eq 35 ]
       then
         echo Total $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # GB
+    if [ $var -eq 41 ]
+      then
+        echo GB $x
+        printf $x >> test.csv
+        printf , >> test.csv
+    fi
+    # Answer
+    if [ $var -eq 44 ]
+      then
+        echo Answer $x
         printf $x >> test.csv
         printf , >> test.csv
     fi
@@ -111,4 +125,3 @@ done
 #   timesteps=1
 #   let stars=stars*10
 # done 
->>>>>>> 655aa5e837c3d42d04302652f02614abb2d6497c

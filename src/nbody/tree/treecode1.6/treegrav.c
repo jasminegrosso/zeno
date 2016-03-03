@@ -79,10 +79,26 @@ local void walktree(nodeptr *aptr, nodeptr *nptr, cellptr cptr, cellptr bptr,
       	if (accept(*ap, psize, pmid)) {		// does it pass the test?
       	  if (Mass(*ap) > 0.0) {		// and contribute to field?
       	    Mass(cptr) = Mass(*ap);		// copy to interaction list
-      	    SETV(Pos(cptr), Pos(*ap));
+      	    //SETV(Pos(cptr), Pos(*ap));
+            Pos(cptr)[0] = Pos(*ap)[0];
+            Pos(cptr)[1] = Pos(*ap)[1];
+            Pos(cptr)[2] = Pos(*ap)[2];
       #if defined(SOFTCORR)
-      	    TRACEM(Trace(cptr), Quad(*ap));	// save trace in copy
-      	    SETMI(trQM);
+            //TRACEM(Trace(cptr), Quad(*ap)); // save trace in copy
+            Trace(cptr) = Trace(cptr) + Quad(*ap)[0][0] + Quad(*ap)[1][1] + Quad(*ap)[2][2];
+
+            //SETMI(trQM);
+
+            trQM[0][0] = 1.0;
+            trQM[1][1] = 1.0;
+            trQM[2][2] = 1.0;
+            trQM[0][1] = 0.0;
+            trQM[0][2] = 0.0;
+            trQM[1][0] = 0.0;
+            trQM[1][2] = 0.0;
+            trQM[2][0] = 0.0;
+            trQM[2][1] = 0.0;
+
       	    MULMS(trQM, trQM, Trace(cptr)/3);
       	    SUBM(Quad(cptr), Quad(*ap), trQM);	// store traceless moment
       #else
